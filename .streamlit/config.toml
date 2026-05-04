@@ -1,0 +1,17 @@
+# Design system for the "Real Wages, Real Lives" data narrative.
+# Editorial palette: warm off-white background, charcoal text, steel blue
+# for wages, alarm red for inflation, amber accent for highlights.
+# All foreground/background pairs hit WCAG AA contrast.
+
+[theme]
+primaryColor = "#dc2626"
+backgroundColor = "#fafaf7"
+secondaryBackgroundColor = "#f1ede4"
+textColor = "#1f2937"
+font = "serif"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false
