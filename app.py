@@ -41,18 +41,18 @@ DATA_PATH = Path(__file__).parent / "data" / "wage_inflation.csv"
 # real-wage delta = green when positive / red when negative, amber for the
 # selected-quarter highlight. Contrast pairs all hit WCAG AA on #fafaf7.
 PALETTE = {
-    "ink":          "#1f2937",
-    "paper":        "#fafaf7",
-    "muted":        "#6b7280",
-    "rule":         "#d1d5db",
-    "wage":         "#2563eb",
-    "inflation":    "#dc2626",
-    "positive":     "#059669",
-    "negative":     "#dc2626",
-    "highlight":    "#f59e0b",
-    "food":         "#ea580c",
-    "housing":      "#7c3aed",
-    "transport":    "#0891b2",
+    "ink": "#1f2937",
+    "paper": "#fafaf7",
+    "muted": "#6b7280",
+    "rule": "#d1d5db",
+    "wage": "#2563eb",
+    "inflation": "#dc2626",
+    "positive": "#059669",
+    "negative": "#dc2626",
+    "highlight": "#f59e0b",
+    "food": "#ea580c",
+    "housing": "#7c3aed",
+    "transport": "#0891b2",
 }
 
 STATE_ORDER = ["NSW", "VIC", "QLD", "SA", "WA", "TAS", "NT", "ACT"]
@@ -115,8 +115,30 @@ st.markdown(
         margin-bottom: 0.5rem;
       }
       .hero-stat {
-        font-family: Georgia, serif; font-size: 4.5rem; line-height: 1;
-        color: #dc2626; font-weight: 700; margin: 0.25rem 0;
+        font-family: Georgia, serif; font-size: 5.5rem; line-height: 1;
+        color: #dc2626; font-weight: 700; margin: 0.25rem 0 0.5rem 0;
+      }
+      .hero-stat .hero-stat-of {
+        color: #6b7280; font-style: italic; font-weight: 500;
+        font-size: 3.5rem;
+      }
+      .hero-stat-card {
+        background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px;
+        padding: 1.6rem 1.8rem; margin-top: 0.75rem;
+        border-top: 4px solid #dc2626;
+      }
+      .hero-stat-kicker {
+        text-transform: uppercase; letter-spacing: 0.16em;
+        color: #6b7280; font-size: 0.75rem; font-weight: 700;
+        margin-bottom: 0.25rem;
+      }
+      .hero-stat-body {
+        font-size: 1rem; line-height: 1.55; color: #374151;
+        margin: 0 0 0.85rem 0;
+      }
+      .hero-stat-foot {
+        font-size: 0.88rem; color: #4b5563;
+        padding-top: 0.7rem; border-top: 1px dashed #e5e7eb;
       }
       .persona-badge {
         display: inline-block; margin-top: 0.75rem;
@@ -132,6 +154,11 @@ st.markdown(
         font-size: 1.1rem; line-height: 1.65; color: #374151;
         max-width: 65ch;
       }
+      .chapter-lede {
+        font-size: 1.12rem; line-height: 1.7; color: #374151;
+        margin: 0.4rem 0 1.25rem 0;
+      }
+      .chapter-lede em { color: #1f2937; }
       .pull-quote {
         border-left: 4px solid #f59e0b; padding-left: 1rem;
         font-style: italic; color: #1f2937; font-size: 1.15rem;
@@ -175,21 +202,30 @@ st.markdown(
          decisive break that also encodes the narrative-arc stage and a
          chapter number for the navigation pills to point at. */
       .chapter-band {
-        margin: 2.75rem 0 0.5rem 0; padding-bottom: 0.5rem;
+        margin: 2.75rem 0 0.75rem 0; padding-bottom: 0.55rem;
         border-bottom: 1px solid #d1d5db;
+      }
+      .chapter-band .chapter-meta {
+        display: flex; align-items: center; gap: 0.6rem;
+        margin-bottom: 0.35rem;
       }
       .chapter-band .arc-pill {
         display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px;
         font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em;
-        text-transform: uppercase; color: #ffffff; margin-right: 0.6rem;
-        vertical-align: middle;
+        text-transform: uppercase; color: #ffffff;
       }
       .chapter-band .arc-what       { background: #2563eb; }
       .chapter-band .arc-so-what    { background: #7c3aed; }
       .chapter-band .arc-what-next  { background: #059669; }
       .chapter-band .chapter-num {
-        font-family: Georgia, serif; color: #6b7280; font-size: 0.92rem;
-        font-weight: 600; letter-spacing: 0.06em; vertical-align: middle;
+        font-family: Georgia, serif; color: #6b7280; font-size: 0.85rem;
+        font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+      }
+      .chapter-band .chapter-title {
+        display: block; margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 2.1rem; font-weight: 700; color: #1f2937;
+        letter-spacing: -0.015em; line-height: 1.15;
       }
       .section-divider {
         height: 1px; background: #d1d5db; margin: 3rem 0 2rem 0;
@@ -228,9 +264,7 @@ def load_data() -> pd.DataFrame:
     )
     nat["cum_real_wage"] = nat["real_wage_growth"].cumsum()
     # Broadcast the cumulative back onto the per-state long frame.
-    df = df.merge(
-        nat[["quarter_date", "cum_real_wage"]], on="quarter_date", how="left"
-    )
+    df = df.merge(nat[["quarter_date", "cum_real_wage"]], on="quarter_date", how="left")
     df["real_sign"] = np.select(
         [df["real_wage_growth"] > 0, df["real_wage_growth"] < 0],
         ["positive", "negative"],
@@ -270,22 +304,34 @@ def _apply_chart_theme(fig: go.Figure, *, height: int = 420) -> go.Figure:
         margin=dict(l=20, r=20, t=100, b=50),
         title=dict(y=0.97, yanchor="top", pad=dict(t=0, b=0)),
         hoverlabel=dict(
-            bgcolor="#ffffff", bordercolor=PALETTE["rule"],
+            bgcolor="#ffffff",
+            bordercolor=PALETTE["rule"],
             font=dict(family="Georgia, serif", size=13, color=PALETTE["ink"]),
         ),
         legend=dict(
-            orientation="h", yanchor="bottom", y=1.02,
-            xanchor="left", x=0, font=dict(size=12),
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+            font=dict(size=12),
             bgcolor="rgba(0,0,0,0)",
         ),
     )
     fig.update_xaxes(
-        showgrid=False, showline=True, linecolor=PALETTE["rule"],
-        ticks="outside", tickcolor=PALETTE["rule"],
+        showgrid=False,
+        showline=True,
+        linecolor=PALETTE["rule"],
+        ticks="outside",
+        tickcolor=PALETTE["rule"],
     )
     fig.update_yaxes(
-        showgrid=True, gridcolor=PALETTE["rule"], gridwidth=0.5,
-        zeroline=True, zerolinecolor=PALETTE["muted"], zerolinewidth=1,
+        showgrid=True,
+        gridcolor=PALETTE["rule"],
+        gridwidth=0.5,
+        zeroline=True,
+        zerolinecolor=PALETTE["muted"],
+        zerolinewidth=1,
     )
     return fig
 
@@ -317,14 +363,13 @@ def tldr_card(num: str, headline: str, body: str, stripe: str) -> str:
 
 # Narrative-arc pill colours — chapter_header looks these up by stage label.
 ARC_CLASSES = {
-    "What":       "arc-what",
-    "So What":    "arc-so-what",
-    "What Next":  "arc-what-next",
+    "What": "arc-what",
+    "So What": "arc-so-what",
+    "What Next": "arc-what-next",
 }
 
 
-def chapter_header(num: int, arc: str, anchor: str, title: str,
-                   lede: str) -> None:
+def chapter_header(num: int, arc: str, anchor: str, title: str, lede: str) -> None:
     """Render a consistent chapter band: arc pill, chapter number, anchor
     target for the sticky nav, the title, and the opening paragraph.
 
@@ -335,13 +380,15 @@ def chapter_header(num: int, arc: str, anchor: str, title: str,
     st.markdown(
         f'<a class="chapter-anchor" id="{anchor}"></a>'
         f'<div class="chapter-band">'
+        f'<div class="chapter-meta">'
         f'<span class="arc-pill {arc_class}">{arc}</span>'
         f'<span class="chapter-num">Chapter {num}</span>'
+        f'</div>'
+        f'<h2 class="chapter-title">{title}</h2>'
         f"</div>",
         unsafe_allow_html=True,
     )
-    st.markdown(f"## {title}")
-    st.markdown(f'<p class="narrative">{lede}</p>', unsafe_allow_html=True)
+    st.markdown(f'<p class="chapter-lede">{lede}</p>', unsafe_allow_html=True)
 
 
 def chapter_nav() -> None:
@@ -354,13 +401,9 @@ def chapter_nav() -> None:
         ("ch4", "4 · Recovery scenarios"),
         ("ch5", "5 · So what now?"),
     ]
-    pills = "".join(
-        f'<a href="#{anchor}">{label}</a>' for anchor, label in items
-    )
+    pills = "".join(f'<a href="#{anchor}">{label}</a>' for anchor, label in items)
     st.markdown(
-        f'<div class="chapter-nav">'
-        f'<span class="nav-label">Jump to</span>{pills}'
-        f"</div>",
+        f'<div class="chapter-nav"><span class="nav-label">Jump to</span>{pills}</div>',
         unsafe_allow_html=True,
     )
 
@@ -372,41 +415,54 @@ def chapter_nav() -> None:
 
 
 def section_hero(df: pd.DataFrame) -> None:
-    """Opening: kicker, headline, lede, and the single most striking stat."""
+    """Opening: kicker, headline, lede on the left; the single most
+    striking stat on the right so the row reads in a balanced sweep
+    instead of leaving the right half empty."""
     nat = national_series(df)
     n_negative = int((nat["real_wage_growth"] < 0).sum())
     n_total = len(nat)
     cum_real = nat["real_wage_growth"].sum()
 
-    st.markdown('<div class="hero-kicker">A Data Narrative · UTS Asm3</div>',
-                unsafe_allow_html=True)
-    st.markdown("# Real Wages, Real Lives")
-    st.markdown(
-        '<p class="narrative">'
-        "Between late 2023 and the end of 2025, the headlines told a "
-        "reassuring story: wages were growing. The number on your payslip "
-        "was getting bigger. And yet, for most Australians, life kept "
-        "getting more expensive faster than the paycheck could keep up. "
-        "This is the gap between the <em>nominal</em> wage and the "
-        "<em>real</em> wage — and over nine quarters, that gap has a shape."
-        "</p>",
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        f'<div class="hero-stat">{n_negative} of {n_total}</div>'
-        '<p class="narrative" style="margin-top:-0.5rem;">'
-        "quarters in which the average Australian worker went "
-        "<strong>backwards</strong> in real terms — wage growth slower than "
-        f"inflation. Cumulative real wage growth across the period: "
-        f"<strong>{cum_real:+.1f}%</strong>."
-        "</p>"
-        '<div class="persona-badge">'
-        '<span class="persona-label">Built for</span>'
-        "Treasury Policy Analyst · federal cost-of-living desk"
-        "</div>",
-        unsafe_allow_html=True,
-    )
+    left, right = st.columns([1.15, 1], gap="large")
+    with left:
+        st.markdown(
+            '<div class="hero-kicker">A Data Narrative · UTS Asm3</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown("# Real Wages, Real Lives")
+        st.markdown(
+            '<p class="narrative">'
+            "Between late 2023 and the end of 2025, the headlines told a "
+            "reassuring story: wages were growing. The number on your "
+            "payslip was getting bigger. And yet, for most Australians, "
+            "life kept getting more expensive faster than the paycheck "
+            "could keep up. This is the gap between the <em>nominal</em> "
+            "wage and the <em>real</em> wage — and over nine quarters, "
+            "that gap has a shape."
+            "</p>"
+            '<div class="persona-badge">'
+            '<span class="persona-label">Built for</span>'
+            "Treasury Policy Analyst · federal cost-of-living desk"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+    with right:
+        st.markdown(
+            '<div class="hero-stat-card">'
+            '<div class="hero-stat-kicker">The headline finding</div>'
+            f'<div class="hero-stat">{n_negative} <span class="hero-stat-of">of</span> {n_total}</div>'
+            '<p class="hero-stat-body">'
+            "quarters in which the average Australian worker went "
+            "<strong>backwards</strong> in real terms — wage growth "
+            "slower than inflation."
+            "</p>"
+            '<div class="hero-stat-foot">'
+            "Cumulative real wage growth across the period: "
+            f"<strong>{cum_real:+.1f}%</strong>"
+            "</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
 
 def section_tldr(df: pd.DataFrame) -> None:
@@ -417,10 +473,16 @@ def section_tldr(df: pd.DataFrame) -> None:
     cum_real = nat["real_wage_growth"].sum()
     cum_housing = nat["housing"].sum()
     last_q = nat.iloc[-1]
-    leader_state_q = df[df["quarter"] == last_q["quarter"]] \
-        .sort_values("wage_index", ascending=False).iloc[0]
-    laggard_state_q = df[df["quarter"] == last_q["quarter"]] \
-        .sort_values("wage_index", ascending=True).iloc[0]
+    leader_state_q = (
+        df[df["quarter"] == last_q["quarter"]]
+        .sort_values("wage_index", ascending=False)
+        .iloc[0]
+    )
+    laggard_state_q = (
+        df[df["quarter"] == last_q["quarter"]]
+        .sort_values("wage_index", ascending=True)
+        .iloc[0]
+    )
     state_spread = leader_state_q["wage_index"] - laggard_state_q["wage_index"]
 
     st.markdown(
@@ -429,33 +491,42 @@ def section_tldr(df: pd.DataFrame) -> None:
     )
     c1, c2, c3 = st.columns(3, gap="medium")
     with c1:
-        st.markdown(tldr_card(
-            "What",
-            "Wages grew. Real wages didn't.",
-            f"Cumulative real-wage growth over the nine quarters of "
-            f"data is <strong>{cum_real:+.1f}%</strong>. Inflation took "
-            "back almost everything wage-setting gave.",
-            stripe=PALETTE["wage"],
-        ), unsafe_allow_html=True)
+        st.markdown(
+            tldr_card(
+                "What",
+                "Wages grew. Real wages didn't.",
+                f"Cumulative real-wage growth over the nine quarters of "
+                f"data is <strong>{cum_real:+.1f}%</strong>. Inflation took "
+                "back almost everything wage-setting gave.",
+                stripe=PALETTE["wage"],
+            ),
+            unsafe_allow_html=True,
+        )
     with c2:
-        st.markdown(tldr_card(
-            "So what",
-            "Housing did the damage.",
-            f"Housing CPI rose a cumulative <strong>{cum_housing:+.1f}%</strong> "
-            "across the period — the single biggest driver of the gap "
-            "between the headline wage rise and lived experience.",
-            stripe=PALETTE["housing"],
-        ), unsafe_allow_html=True)
+        st.markdown(
+            tldr_card(
+                "So what",
+                "Housing did the damage.",
+                f"Housing CPI rose a cumulative <strong>{cum_housing:+.1f}%</strong> "
+                "across the period — the single biggest driver of the gap "
+                "between the headline wage rise and lived experience.",
+                stripe=PALETTE["housing"],
+            ),
+            unsafe_allow_html=True,
+        )
     with c3:
-        st.markdown(tldr_card(
-            "What next",
-            "The federation isn't recovering at one speed.",
-            f"In {last_q['quarter']}, {leader_state_q['state_name']} sits "
-            f"{state_spread:.1f} index points ahead of "
-            f"{laggard_state_q['state_name']} on the WPI. Recovery policy "
-            "needs to land state by state, not in averages.",
-            stripe=PALETTE["positive"],
-        ), unsafe_allow_html=True)
+        st.markdown(
+            tldr_card(
+                "What next",
+                "The federation isn't recovering at one speed.",
+                f"In {last_q['quarter']}, {leader_state_q['state_name']} sits "
+                f"{state_spread:.1f} index points ahead of "
+                f"{laggard_state_q['state_name']} on the WPI. Recovery policy "
+                "needs to land state by state, not in averages.",
+                stripe=PALETTE["positive"],
+            ),
+            unsafe_allow_html=True,
+        )
 
 
 def section_what_national(df: pd.DataFrame, selected_quarter: str) -> None:
@@ -465,7 +536,9 @@ def section_what_national(df: pd.DataFrame, selected_quarter: str) -> None:
     sel_row = nat[nat["quarter"] == selected_quarter].iloc[0]
 
     chapter_header(
-        num=1, arc="What", anchor="ch1",
+        num=1,
+        arc="What",
+        anchor="ch1",
         title="The Headline Number Lies",
         lede=(
             "ABS publishes two numbers every quarter. The Wage Price "
@@ -480,73 +553,105 @@ def section_what_national(df: pd.DataFrame, selected_quarter: str) -> None:
     # The vertical band marks the quarter the reader has selected so the
     # KPIs below the chart make geographic sense at a glance.
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=nat["quarter"], y=nat["wage_growth"],
-        mode="lines+markers", name="Wage growth (QoQ %)",
-        line=dict(color=PALETTE["wage"], width=3),
-        marker=dict(size=8),
-        hovertemplate="<b>%{x}</b><br>Wage growth: %{y:+.1f}%<extra></extra>",
-    ))
-    fig.add_trace(go.Scatter(
-        x=nat["quarter"], y=nat["inflation_rate"],
-        mode="lines+markers", name="Inflation (QoQ %)",
-        line=dict(color=PALETTE["inflation"], width=3),
-        marker=dict(size=8),
-        hovertemplate="<b>%{x}</b><br>Inflation: %{y:+.1f}%<extra></extra>",
-    ))
-    fig.add_trace(go.Bar(
-        x=nat["quarter"], y=nat["real_wage_growth"],
-        name="Real wage growth (gap)",
-        marker_color=[
-            PALETTE["positive"] if v > 0 else
-            PALETTE["negative"] if v < 0 else PALETTE["muted"]
-            for v in nat["real_wage_growth"]
-        ],
-        opacity=0.55,
-        hovertemplate=("<b>%{x}</b><br>Real wage Δ: %{y:+.1f}%"
-                       "<extra></extra>"),
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=nat["quarter"],
+            y=nat["wage_growth"],
+            mode="lines+markers",
+            name="Wage growth (QoQ %)",
+            line=dict(color=PALETTE["wage"], width=3),
+            marker=dict(size=8),
+            hovertemplate="<b>%{x}</b><br>Wage growth: %{y:+.1f}%<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=nat["quarter"],
+            y=nat["inflation_rate"],
+            mode="lines+markers",
+            name="Inflation (QoQ %)",
+            line=dict(color=PALETTE["inflation"], width=3),
+            marker=dict(size=8),
+            hovertemplate="<b>%{x}</b><br>Inflation: %{y:+.1f}%<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Bar(
+            x=nat["quarter"],
+            y=nat["real_wage_growth"],
+            name="Real wage growth (gap)",
+            marker_color=[
+                PALETTE["positive"]
+                if v > 0
+                else PALETTE["negative"]
+                if v < 0
+                else PALETTE["muted"]
+                for v in nat["real_wage_growth"]
+            ],
+            opacity=0.55,
+            hovertemplate=("<b>%{x}</b><br>Real wage Δ: %{y:+.1f}%<extra></extra>"),
+        )
+    )
     # Selected-quarter highlight: a vertical band the reader can scan to.
     fig.add_vrect(
-        x0=selected_quarter, x1=selected_quarter,
+        x0=selected_quarter,
+        x1=selected_quarter,
         line=dict(color=PALETTE["highlight"], width=2, dash="dot"),
     )
     fig.update_layout(
         title=dict(
             text="Wages vs inflation — quarter-on-quarter, Australia",
-            x=0, font=dict(size=16),
+            x=0,
+            font=dict(size=16),
         ),
-        bargap=0.45, yaxis_title="Per-quarter change (%)",
+        bargap=0.45,
+        yaxis_title="Per-quarter change (%)",
     )
     _apply_chart_theme(fig, height=460)
     st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
     # KPI strip — these update as the reader changes the quarter.
     real_delta = sel_row["real_wage_growth"]
-    delta_word = ("ahead of" if real_delta > 0
-                  else "behind" if real_delta < 0
-                  else "level with")
+    delta_word = (
+        "ahead of" if real_delta > 0 else "behind" if real_delta < 0 else "level with"
+    )
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.markdown(kpi_card(
-            "Selected quarter", selected_quarter,
-            "Use the sidebar slider to scrub.",
-        ), unsafe_allow_html=True)
+        st.markdown(
+            kpi_card(
+                "Selected quarter",
+                selected_quarter,
+                "Use the sidebar slider to scrub.",
+            ),
+            unsafe_allow_html=True,
+        )
     with c2:
-        st.markdown(kpi_card(
-            "Wage growth (QoQ)", f"{sel_row['wage_growth']:+.1f}%",
-            "ABS WPI, all sectors, original.",
-        ), unsafe_allow_html=True)
+        st.markdown(
+            kpi_card(
+                "Wage growth (QoQ)",
+                f"{sel_row['wage_growth']:+.1f}%",
+                "ABS WPI, all sectors, original.",
+            ),
+            unsafe_allow_html=True,
+        )
     with c3:
-        st.markdown(kpi_card(
-            "Inflation (QoQ)", f"{sel_row['inflation_rate']:+.1f}%",
-            "ABS CPI, All Groups, weighted 8-cap-city avg.",
-        ), unsafe_allow_html=True)
+        st.markdown(
+            kpi_card(
+                "Inflation (QoQ)",
+                f"{sel_row['inflation_rate']:+.1f}%",
+                "ABS CPI, All Groups, weighted 8-cap-city avg.",
+            ),
+            unsafe_allow_html=True,
+        )
     with c4:
-        st.markdown(kpi_card(
-            "Real wage Δ", f"{real_delta:+.1f}%",
-            f"Workers were {delta_word} the cost of living.",
-        ), unsafe_allow_html=True)
+        st.markdown(
+            kpi_card(
+                "Real wage Δ",
+                f"{real_delta:+.1f}%",
+                f"Workers were {delta_word} the cost of living.",
+            ),
+            unsafe_allow_html=True,
+        )
 
 
 def section_what_state(df: pd.DataFrame, selected_quarter: str) -> None:
@@ -556,7 +661,9 @@ def section_what_state(df: pd.DataFrame, selected_quarter: str) -> None:
     snapshot = snapshot.set_index("state_code").loc[STATE_ORDER].reset_index()
 
     chapter_header(
-        num=2, arc="What", anchor="ch2",
+        num=2,
+        arc="What",
+        anchor="ch2",
         title="Eight Australias, Eight Pay Stories",
         lede=(
             "National averages flatten everything. Tasmania pays "
@@ -575,39 +682,58 @@ def section_what_state(df: pd.DataFrame, selected_quarter: str) -> None:
         # readers and prints in greyscale.
         fig = px.scatter_geo(
             snapshot,
-            lat="latitude", lon="longitude",
+            lat="latitude",
+            lon="longitude",
             size="wage_index",
             color="wage_index",
             color_continuous_scale=[
-                [0.0, "#fde68a"], [0.5, "#f59e0b"], [1.0, "#9a3412"],
+                [0.0, "#fde68a"],
+                [0.5, "#f59e0b"],
+                [1.0, "#9a3412"],
             ],
             size_max=42,
             hover_name="state_name",
-            custom_data=["state_code", "wage_index", "wage_growth",
-                         "inflation_rate", "real_wage_growth"],
+            custom_data=[
+                "state_code",
+                "wage_index",
+                "wage_growth",
+                "inflation_rate",
+                "real_wage_growth",
+            ],
             projection="mercator",
         )
-        fig.update_traces(hovertemplate=(
-            "<b>%{hovertext}</b> (%{customdata[0]})<br>"
-            "Wage Price Index: <b>%{customdata[1]:.1f}</b><br>"
-            "Wage growth: %{customdata[2]:+.1f}%<br>"
-            "Inflation: %{customdata[3]:+.1f}%<br>"
-            "Real wage Δ: %{customdata[4]:+.1f}%<extra></extra>"
-        ))
+        fig.update_traces(
+            hovertemplate=(
+                "<b>%{hovertext}</b> (%{customdata[0]})<br>"
+                "Wage Price Index: <b>%{customdata[1]:.1f}</b><br>"
+                "Wage growth: %{customdata[2]:+.1f}%<br>"
+                "Inflation: %{customdata[3]:+.1f}%<br>"
+                "Real wage Δ: %{customdata[4]:+.1f}%<extra></extra>"
+            )
+        )
         fig.update_geos(
-            visible=True, resolution=50,
-            showcountries=True, countrycolor=PALETTE["rule"],
-            showland=True, landcolor="#f1ede4",
-            showocean=True, oceancolor="#e7e2d5",
-            lataxis_range=[-44, -10], lonaxis_range=[112, 155],
+            visible=True,
+            resolution=50,
+            showcountries=True,
+            countrycolor=PALETTE["rule"],
+            showland=True,
+            landcolor="#f1ede4",
+            showocean=True,
+            oceancolor="#e7e2d5",
+            lataxis_range=[-44, -10],
+            lonaxis_range=[112, 155],
         )
         fig.update_layout(
             title=dict(
                 text=f"Wage Price Index by state — {selected_quarter}",
-                x=0, y=0.97, yanchor="top", font=dict(size=16),
+                x=0,
+                y=0.97,
+                yanchor="top",
+                font=dict(size=16),
             ),
             coloraxis_colorbar=dict(title="WPI"),
-            margin=dict(l=0, r=0, t=70, b=0), height=460,
+            margin=dict(l=0, r=0, t=70, b=0),
+            height=460,
             paper_bgcolor=PALETTE["paper"],
             font=dict(family="Georgia, serif", color=PALETTE["ink"]),
         )
@@ -618,23 +744,26 @@ def section_what_state(df: pd.DataFrame, selected_quarter: str) -> None:
         # geography; bars show ordering. Both views together is a Gestalt
         # similarity-by-position trick.
         sorted_snap = snapshot.sort_values("wage_index", ascending=True)
-        fig2 = go.Figure(go.Bar(
-            x=sorted_snap["wage_index"], y=sorted_snap["state_code"],
-            orientation="h",
-            marker=dict(
-                color=sorted_snap["wage_index"],
-                colorscale=[[0.0, "#fde68a"], [1.0, "#9a3412"]],
-                showscale=False,
-            ),
-            customdata=sorted_snap[["state_name", "wage_growth"]].values,
-            hovertemplate=(
-                "<b>%{customdata[0]}</b><br>"
-                "WPI: %{x:.1f}<br>QoQ wage growth: %{customdata[1]:+.1f}%"
-                "<extra></extra>"
-            ),
-            text=sorted_snap["wage_index"].map(lambda v: f"{v:.1f}"),
-            textposition="outside",
-        ))
+        fig2 = go.Figure(
+            go.Bar(
+                x=sorted_snap["wage_index"],
+                y=sorted_snap["state_code"],
+                orientation="h",
+                marker=dict(
+                    color=sorted_snap["wage_index"],
+                    colorscale=[[0.0, "#fde68a"], [1.0, "#9a3412"]],
+                    showscale=False,
+                ),
+                customdata=sorted_snap[["state_name", "wage_growth"]].values,
+                hovertemplate=(
+                    "<b>%{customdata[0]}</b><br>"
+                    "WPI: %{x:.1f}<br>QoQ wage growth: %{customdata[1]:+.1f}%"
+                    "<extra></extra>"
+                ),
+                text=sorted_snap["wage_index"].map(lambda v: f"{v:.1f}"),
+                textposition="outside",
+            )
+        )
         fig2.update_layout(
             title=dict(text="Ranked WPI", x=0, font=dict(size=16)),
             xaxis_title="Wage Price Index (Sep 2008 = 100)",
@@ -664,7 +793,9 @@ def section_so_what_drivers(df: pd.DataFrame) -> None:
     nat = national_series(df)
 
     chapter_header(
-        num=3, arc="So What", anchor="ch3",
+        num=3,
+        arc="So What",
+        anchor="ch3",
         title="Where the Money Actually Went",
         lede=(
             "When CPI says &ldquo;inflation was 0.6% this quarter,&rdquo; "
@@ -676,27 +807,37 @@ def section_so_what_drivers(df: pd.DataFrame) -> None:
     )
 
     fig = go.Figure()
-    for col, name in [("housing", "Housing"),
-                      ("food", "Food & non-alc."),
-                      ("transport", "Transport")]:
-        fig.add_trace(go.Scatter(
-            x=nat["quarter"], y=nat[col],
-            mode="lines+markers",
-            name=name,
-            line=dict(color=PALETTE[col], width=2.5),
-            marker=dict(size=7),
-            hovertemplate=f"<b>%{{x}}</b><br>{name}: %{{y:+.1f}}%<extra></extra>",
-        ))
-    fig.add_trace(go.Scatter(
-        x=nat["quarter"], y=nat["inflation_rate"],
-        mode="lines", name="All Groups CPI",
-        line=dict(color=PALETTE["ink"], width=2, dash="dash"),
-        hovertemplate="<b>%{x}</b><br>All Groups CPI: %{y:+.1f}%<extra></extra>",
-    ))
+    for col, name in [
+        ("housing", "Housing"),
+        ("food", "Food & non-alc."),
+        ("transport", "Transport"),
+    ]:
+        fig.add_trace(
+            go.Scatter(
+                x=nat["quarter"],
+                y=nat[col],
+                mode="lines+markers",
+                name=name,
+                line=dict(color=PALETTE[col], width=2.5),
+                marker=dict(size=7),
+                hovertemplate=f"<b>%{{x}}</b><br>{name}: %{{y:+.1f}}%<extra></extra>",
+            )
+        )
+    fig.add_trace(
+        go.Scatter(
+            x=nat["quarter"],
+            y=nat["inflation_rate"],
+            mode="lines",
+            name="All Groups CPI",
+            line=dict(color=PALETTE["ink"], width=2, dash="dash"),
+            hovertemplate="<b>%{x}</b><br>All Groups CPI: %{y:+.1f}%<extra></extra>",
+        )
+    )
     fig.update_layout(
         title=dict(
             text="QoQ % change — CPI sub-categories vs headline",
-            x=0, font=dict(size=16),
+            x=0,
+            font=dict(size=16),
         ),
         yaxis_title="QoQ % change",
     )
@@ -728,7 +869,9 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
     cum_so_far = nat["real_wage_growth"].sum()
 
     chapter_header(
-        num=4, arc="What Next", anchor="ch4",
+        num=4,
+        arc="What Next",
+        anchor="ch4",
         title="When Do Real Wages Recover?",
         lede=(
             "Pull the levers below to set a quarterly wage-growth and "
@@ -744,9 +887,9 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
     # key namespace (no `value=` on the widgets) because mixing `value=`
     # and `key=` on a Streamlit widget makes preset clicks silently fail.
     PRESETS = {
-        "RBA-aligned":  dict(scen_wage=0.9, scen_inflation=0.6, scen_target=3.0),
-        "Optimistic":   dict(scen_wage=1.2, scen_inflation=0.5, scen_target=3.0),
-        "Pessimistic":  dict(scen_wage=0.6, scen_inflation=1.1, scen_target=3.0),
+        "RBA-aligned": dict(scen_wage=0.9, scen_inflation=0.6, scen_target=3.0),
+        "Optimistic": dict(scen_wage=1.2, scen_inflation=0.5, scen_target=3.0),
+        "Pessimistic": dict(scen_wage=0.6, scen_inflation=1.1, scen_target=3.0),
     }
     for k, v in PRESETS["RBA-aligned"].items():
         st.session_state.setdefault(k, v)
@@ -773,21 +916,27 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
     with cw:
         scen_wage = st.slider(
             "Hypothetical quarterly wage growth (%)",
-            min_value=0.0, max_value=2.0, step=0.1,
+            min_value=0.0,
+            max_value=2.0,
+            step=0.1,
             help="Average QoQ wage growth across the period was about 0.85%.",
             key="scen_wage",
         )
     with ci:
         scen_inflation = st.slider(
             "Hypothetical quarterly inflation (%)",
-            min_value=0.0, max_value=2.0, step=0.1,
+            min_value=0.0,
+            max_value=2.0,
+            step=0.1,
             help="Average QoQ inflation across the period was about 0.7%.",
             key="scen_inflation",
         )
     with ct:
         target = st.number_input(
             "Recovery target — cumulative real-wage gain (%)",
-            min_value=-5.0, max_value=10.0, step=0.5,
+            min_value=-5.0,
+            max_value=10.0,
+            step=0.5,
             help="How much cumulative real-wage growth counts as 'recovered'?",
             key="scen_target",
         )
@@ -806,29 +955,39 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
             last_year += 1
         future_quarters.append(f"{last_year} Q{last_qn}")
 
-    scen_real = scen_wage - scen_inflation
-    proj_cum = [cum_so_far + scen_real * (i + 1) for i in range(horizon)]
+    scen_real = round(scen_wage - scen_inflation, 2)
+    cum_so_far_r = round(cum_so_far, 2)
+    proj_cum = [round(cum_so_far_r + scen_real * (i + 1), 2) for i in range(horizon)]
+    actual_cum = nat["real_wage_growth"].cumsum().round(2)
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=nat["quarter"], y=nat["real_wage_growth"].cumsum(),
-        mode="lines+markers", name="Actual cumulative real wage",
-        line=dict(color=PALETTE["wage"], width=3),
-        marker=dict(size=8),
-        hovertemplate="<b>%{x}</b><br>Cumulative: %{y:+.1f}%<extra></extra>",
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=nat["quarter"],
+            y=actual_cum,
+            mode="lines+markers",
+            name="Actual cumulative real wage",
+            line=dict(color=PALETTE["wage"], width=3),
+            marker=dict(size=8),
+            hovertemplate="<b>%{x}</b><br>Cumulative: %{y:+.1f}%<extra></extra>",
+        )
+    )
     # Bridge the last actual point to the first projected point so the
     # line is visually unbroken.
-    fig.add_trace(go.Scatter(
-        x=[nat["quarter"].iloc[-1]] + future_quarters,
-        y=[cum_so_far] + proj_cum,
-        mode="lines+markers", name="Your scenario",
-        line=dict(color=PALETTE["highlight"], width=3, dash="dash"),
-        marker=dict(size=8, symbol="diamond"),
-        hovertemplate="<b>%{x}</b><br>Projected cumulative: %{y:+.1f}%<extra></extra>",
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=[nat["quarter"].iloc[-1]] + future_quarters,
+            y=[cum_so_far_r] + proj_cum,
+            mode="lines+markers",
+            name="Your scenario",
+            line=dict(color=PALETTE["highlight"], width=3, dash="dash"),
+            marker=dict(size=8, symbol="diamond"),
+            hovertemplate="<b>%{x}</b><br>Projected cumulative: %{y:+.1f}%<extra></extra>",
+        )
+    )
     fig.add_hline(
-        y=target, line=dict(color=PALETTE["positive"], width=1.5, dash="dot"),
+        y=target,
+        line=dict(color=PALETTE["positive"], width=1.5, dash="dot"),
         annotation_text=f"Recovery target: {target:+.1f}%",
         annotation_position="top right",
         annotation_font_color=PALETTE["positive"],
@@ -836,7 +995,8 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
     fig.update_layout(
         title=dict(
             text="Cumulative real-wage growth — actual + your scenario",
-            x=0, font=dict(size=16),
+            x=0,
+            font=dict(size=16),
         ),
         yaxis_title="Cumulative real wage Δ since 2023 Q4 (%)",
     )
@@ -865,14 +1025,17 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
             )
 
     st.markdown(
-        f'<div class="pull-quote">{verdict}</div>', unsafe_allow_html=True,
+        f'<div class="pull-quote">{verdict}</div>',
+        unsafe_allow_html=True,
     )
 
 
 def section_call_to_action() -> None:
     """Closing — three stakeholder lenses on the same story."""
     chapter_header(
-        num=5, arc="What Next", anchor="ch5",
+        num=5,
+        arc="What Next",
+        anchor="ch5",
         title="So What Should Anyone Do About It?",
         lede=(
             "The same data carries a different obligation depending on "
@@ -891,7 +1054,7 @@ def section_call_to_action() -> None:
     with c2:
         st.markdown(
             "### For the journalist\n"
-            "\"Wages up 0.7%\" is not the headline. The headline is the "
+            '"Wages up 0.7%" is not the headline. The headline is the '
             "delta against inflation, and the delta against the categories "
             "your readers actually spend on. Lead with the gap."
         )
@@ -937,7 +1100,9 @@ def main() -> None:
             unsafe_allow_html=True,
         )
         selected_quarter = st.select_slider(
-            "Spotlight quarter", options=quarters, value=quarters[-1],
+            "Spotlight quarter",
+            options=quarters,
+            value=quarters[-1],
         )
 
         with st.expander("Glossary", expanded=False):
