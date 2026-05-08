@@ -75,11 +75,40 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-      .block-container { padding-top: 2.5rem; padding-bottom: 4rem; max-width: 1200px; }
+      .block-container { padding-top: 1.5rem; padding-bottom: 4rem; max-width: 1200px; }
       h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; letter-spacing: -0.01em; }
       h1 { font-size: 3.0rem !important; line-height: 1.1; margin-bottom: 0.5rem; }
-      h2 { font-size: 2.0rem !important; margin-top: 2.5rem; }
+      h2 { font-size: 2.0rem !important; margin-top: 0.5rem; margin-bottom: 0.5rem; }
       h3 { font-size: 1.35rem !important; }
+      a.chapter-anchor {
+        display: block; position: relative; top: -90px; visibility: hidden;
+      }
+      /* Sticky chapter nav — scroll-spy without JS. Uses anchor links so
+         the browser handles scroll. position:sticky keeps it visible while
+         the reader works through long chapters. */
+      .chapter-nav {
+        position: sticky; top: 0; z-index: 99;
+        background: rgba(250, 250, 247, 0.96);
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid #d1d5db;
+        padding: 0.6rem 0; margin: 0 0 1.5rem 0;
+        display: flex; flex-wrap: wrap; gap: 0.4rem;
+        align-items: center; justify-content: flex-start;
+      }
+      .chapter-nav a {
+        text-decoration: none; color: #374151;
+        font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em;
+        padding: 0.35rem 0.75rem; border-radius: 999px;
+        border: 1px solid #d1d5db; background: #ffffff;
+        white-space: nowrap; transition: all 0.15s ease;
+      }
+      .chapter-nav a:hover {
+        background: #1f2937; color: #ffffff; border-color: #1f2937;
+      }
+      .chapter-nav .nav-label {
+        font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.14em;
+        color: #6b7280; margin-right: 0.5rem; font-weight: 600;
+      }
       .hero-kicker {
         text-transform: uppercase; letter-spacing: 0.18em;
         color: #6b7280; font-size: 0.85rem; font-weight: 600;
@@ -88,6 +117,16 @@ st.markdown(
       .hero-stat {
         font-family: Georgia, serif; font-size: 4.5rem; line-height: 1;
         color: #dc2626; font-weight: 700; margin: 0.25rem 0;
+      }
+      .persona-badge {
+        display: inline-block; margin-top: 0.75rem;
+        padding: 0.35rem 0.85rem; border-radius: 999px;
+        background: #1f2937; color: #fafaf7;
+        font-size: 0.78rem; letter-spacing: 0.06em; font-weight: 600;
+      }
+      .persona-badge .persona-label {
+        color: #f59e0b; text-transform: uppercase; letter-spacing: 0.14em;
+        font-size: 0.68rem; margin-right: 0.5rem;
       }
       .narrative {
         font-size: 1.1rem; line-height: 1.65; color: #374151;
@@ -98,6 +137,27 @@ st.markdown(
         font-style: italic; color: #1f2937; font-size: 1.15rem;
         margin: 1.5rem 0; max-width: 60ch;
       }
+      /* TL;DR card — compact insight tile for the executive-summary row.
+         Three across, equal height, with a coloured top stripe so the row
+         scans in <5 seconds. */
+      .tldr-card {
+        background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;
+        padding: 1.1rem 1.2rem; height: 100%; position: relative;
+        overflow: hidden;
+      }
+      .tldr-card::before {
+        content: ""; position: absolute; top: 0; left: 0; right: 0;
+        height: 4px; background: var(--stripe, #1f2937);
+      }
+      .tldr-num {
+        font-family: Georgia, serif; font-size: 0.78rem; font-weight: 600;
+        color: #6b7280; letter-spacing: 0.14em; text-transform: uppercase;
+      }
+      .tldr-headline {
+        font-family: Georgia, serif; font-size: 1.25rem; font-weight: 700;
+        color: #1f2937; margin: 0.25rem 0 0.5rem 0; line-height: 1.3;
+      }
+      .tldr-body { font-size: 0.92rem; line-height: 1.5; color: #4b5563; }
       .kpi-card {
         background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;
         padding: 1.1rem 1.2rem; height: 100%;
@@ -111,6 +171,26 @@ st.markdown(
         color: #1f2937; margin-top: 0.2rem;
       }
       .kpi-sub { color: #6b7280; font-size: 0.85rem; margin-top: 0.2rem; }
+      /* Chapter header band — replaces the thin <hr> divider with a more
+         decisive break that also encodes the narrative-arc stage and a
+         chapter number for the navigation pills to point at. */
+      .chapter-band {
+        margin: 2.75rem 0 0.5rem 0; padding-bottom: 0.5rem;
+        border-bottom: 1px solid #d1d5db;
+      }
+      .chapter-band .arc-pill {
+        display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px;
+        font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em;
+        text-transform: uppercase; color: #ffffff; margin-right: 0.6rem;
+        vertical-align: middle;
+      }
+      .chapter-band .arc-what       { background: #2563eb; }
+      .chapter-band .arc-so-what    { background: #7c3aed; }
+      .chapter-band .arc-what-next  { background: #059669; }
+      .chapter-band .chapter-num {
+        font-family: Georgia, serif; color: #6b7280; font-size: 0.92rem;
+        font-weight: 600; letter-spacing: 0.06em; vertical-align: middle;
+      }
       .section-divider {
         height: 1px; background: #d1d5db; margin: 3rem 0 2rem 0;
         border: none;
@@ -223,6 +303,68 @@ def kpi_card(label: str, value: str, sub: str = "") -> str:
     )
 
 
+def tldr_card(num: str, headline: str, body: str, stripe: str) -> str:
+    """One tile in the TL;DR strip. The coloured top stripe lets the
+    three cards scan as a unit — wage / cost-of-living / recovery."""
+    return (
+        f'<div class="tldr-card" style="--stripe: {stripe};">'
+        f'<div class="tldr-num">{num}</div>'
+        f'<div class="tldr-headline">{headline}</div>'
+        f'<div class="tldr-body">{body}</div>'
+        f"</div>"
+    )
+
+
+# Narrative-arc pill colours — chapter_header looks these up by stage label.
+ARC_CLASSES = {
+    "What":       "arc-what",
+    "So What":    "arc-so-what",
+    "What Next":  "arc-what-next",
+}
+
+
+def chapter_header(num: int, arc: str, anchor: str, title: str,
+                   lede: str) -> None:
+    """Render a consistent chapter band: arc pill, chapter number, anchor
+    target for the sticky nav, the title, and the opening paragraph.
+
+    The invisible <a> sits 90px above the visible heading so anchor jumps
+    don't bury the title under the sticky nav bar.
+    """
+    arc_class = ARC_CLASSES.get(arc, "arc-what")
+    st.markdown(
+        f'<a class="chapter-anchor" id="{anchor}"></a>'
+        f'<div class="chapter-band">'
+        f'<span class="arc-pill {arc_class}">{arc}</span>'
+        f'<span class="chapter-num">Chapter {num}</span>'
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(f"## {title}")
+    st.markdown(f'<p class="narrative">{lede}</p>', unsafe_allow_html=True)
+
+
+def chapter_nav() -> None:
+    """Sticky pill nav linking to each chapter anchor. Browsers handle
+    the scroll natively — no JS required, no Streamlit reruns."""
+    items = [
+        ("ch1", "1 · Headline lies"),
+        ("ch2", "2 · Eight Australias"),
+        ("ch3", "3 · Where money went"),
+        ("ch4", "4 · Recovery scenarios"),
+        ("ch5", "5 · So what now?"),
+    ]
+    pills = "".join(
+        f'<a href="#{anchor}">{label}</a>' for anchor, label in items
+    )
+    st.markdown(
+        f'<div class="chapter-nav">'
+        f'<span class="nav-label">Jump to</span>{pills}'
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Sections — one function per chapter so the narrative flow in main()
 # reads top-to-bottom like an outline.
@@ -258,9 +400,62 @@ def section_hero(df: pd.DataFrame) -> None:
         "<strong>backwards</strong> in real terms — wage growth slower than "
         f"inflation. Cumulative real wage growth across the period: "
         f"<strong>{cum_real:+.1f}%</strong>."
-        "</p>",
+        "</p>"
+        '<div class="persona-badge">'
+        '<span class="persona-label">Built for</span>'
+        "Treasury Policy Analyst · federal cost-of-living desk"
+        "</div>",
         unsafe_allow_html=True,
     )
+
+
+def section_tldr(df: pd.DataFrame) -> None:
+    """Three-card executive summary directly under the hero. A reader who
+    only has 30 seconds gets the entire What → So What → What Next here;
+    the chapters that follow are the evidence."""
+    nat = national_series(df)
+    cum_real = nat["real_wage_growth"].sum()
+    cum_housing = nat["housing"].sum()
+    last_q = nat.iloc[-1]
+    leader_state_q = df[df["quarter"] == last_q["quarter"]] \
+        .sort_values("wage_index", ascending=False).iloc[0]
+    laggard_state_q = df[df["quarter"] == last_q["quarter"]] \
+        .sort_values("wage_index", ascending=True).iloc[0]
+    state_spread = leader_state_q["wage_index"] - laggard_state_q["wage_index"]
+
+    st.markdown(
+        '<p class="hero-kicker" style="margin-top:2rem;">The 30-second version</p>',
+        unsafe_allow_html=True,
+    )
+    c1, c2, c3 = st.columns(3, gap="medium")
+    with c1:
+        st.markdown(tldr_card(
+            "What",
+            "Wages grew. Real wages didn't.",
+            f"Cumulative real-wage growth over the nine quarters of "
+            f"data is <strong>{cum_real:+.1f}%</strong>. Inflation took "
+            "back almost everything wage-setting gave.",
+            stripe=PALETTE["wage"],
+        ), unsafe_allow_html=True)
+    with c2:
+        st.markdown(tldr_card(
+            "So what",
+            "Housing did the damage.",
+            f"Housing CPI rose a cumulative <strong>{cum_housing:+.1f}%</strong> "
+            "across the period — the single biggest driver of the gap "
+            "between the headline wage rise and lived experience.",
+            stripe=PALETTE["housing"],
+        ), unsafe_allow_html=True)
+    with c3:
+        st.markdown(tldr_card(
+            "What next",
+            "The federation isn't recovering at one speed.",
+            f"In {last_q['quarter']}, {leader_state_q['state_name']} sits "
+            f"{state_spread:.1f} index points ahead of "
+            f"{laggard_state_q['state_name']} on the WPI. Recovery policy "
+            "needs to land state by state, not in averages.",
+            stripe=PALETTE["positive"],
+        ), unsafe_allow_html=True)
 
 
 def section_what_national(df: pd.DataFrame, selected_quarter: str) -> None:
@@ -269,16 +464,16 @@ def section_what_national(df: pd.DataFrame, selected_quarter: str) -> None:
     nat = national_series(df)
     sel_row = nat[nat["quarter"] == selected_quarter].iloc[0]
 
-    st.markdown("## Chapter 1 — The Headline Number Lies")
-    st.markdown(
-        '<p class="narrative">'
-        "ABS publishes two numbers every quarter. The Wage Price Index "
-        "tells you how fast pay is rising. The Consumer Price Index tells "
-        "you how fast your shopping basket is rising. Most reporting "
-        "quotes one or the other in isolation. The story emerges when "
-        "you put them on the same axis."
-        "</p>",
-        unsafe_allow_html=True,
+    chapter_header(
+        num=1, arc="What", anchor="ch1",
+        title="The Headline Number Lies",
+        lede=(
+            "ABS publishes two numbers every quarter. The Wage Price "
+            "Index tells you how fast pay is rising. The Consumer Price "
+            "Index tells you how fast your shopping basket is rising. "
+            "Most reporting quotes one or the other in isolation. The "
+            "story emerges when you put them on the same axis."
+        ),
     )
 
     # Three-line chart: wage_growth, inflation_rate, real_wage_growth.
@@ -360,16 +555,16 @@ def section_what_state(df: pd.DataFrame, selected_quarter: str) -> None:
     snapshot = df[df["quarter"] == selected_quarter].copy()
     snapshot = snapshot.set_index("state_code").loc[STATE_ORDER].reset_index()
 
-    st.markdown("## Chapter 2 — Eight Australias, Eight Pay Stories")
-    st.markdown(
-        '<p class="narrative">'
-        "National averages flatten everything. Tasmania pays differently "
-        "from the ACT; Queensland tracks differently from Western "
-        "Australia. The Wage Price Index — re-based to 100 in Sep 2008 "
-        "— shows where each state has gotten to. Hover any bubble for "
-        "the full numbers."
-        "</p>",
-        unsafe_allow_html=True,
+    chapter_header(
+        num=2, arc="What", anchor="ch2",
+        title="Eight Australias, Eight Pay Stories",
+        lede=(
+            "National averages flatten everything. Tasmania pays "
+            "differently from the ACT; Queensland tracks differently "
+            "from Western Australia. The Wage Price Index — re-based "
+            "to 100 in Sep 2008 — shows where each state has gotten "
+            "to. Hover any bubble for the full numbers."
+        ),
     )
 
     map_col, bar_col = st.columns([3, 2])
@@ -468,16 +663,16 @@ def section_so_what_drivers(df: pd.DataFrame) -> None:
     final-quarter horizontal bars show levels."""
     nat = national_series(df)
 
-    st.markdown("## Chapter 3 — Where the Money Actually Went")
-    st.markdown(
-        '<p class="narrative">'
-        "When CPI says \"inflation was 0.6% this quarter,\" that 0.6% is "
-        "an average across hundreds of categories. Some are flat. Some "
-        "are catastrophic. For renters and commuters, the headline rate "
-        "underweights the line items that actually determine whether the "
-        "month ends in the black."
-        "</p>",
-        unsafe_allow_html=True,
+    chapter_header(
+        num=3, arc="So What", anchor="ch3",
+        title="Where the Money Actually Went",
+        lede=(
+            "When CPI says &ldquo;inflation was 0.6% this quarter,&rdquo; "
+            "that 0.6% is an average across hundreds of categories. Some "
+            "are flat. Some are catastrophic. For renters and commuters, "
+            "the headline rate underweights the line items that actually "
+            "determine whether the month ends in the black."
+        ),
     )
 
     fig = go.Figure()
@@ -532,35 +727,69 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
     last = nat.iloc[-1]
     cum_so_far = nat["real_wage_growth"].sum()
 
-    st.markdown("## Chapter 4 — When Do Real Wages Recover?")
-    st.markdown(
-        '<p class="narrative">'
-        "Pull the levers below to set a quarterly wage-growth and "
-        "inflation rate for the next two years. The dashed line shows "
-        "where cumulative real wages end up under your scenario, "
-        "starting from where the actual data leaves off."
-        "</p>",
-        unsafe_allow_html=True,
+    chapter_header(
+        num=4, arc="What Next", anchor="ch4",
+        title="When Do Real Wages Recover?",
+        lede=(
+            "Pull the levers below to set a quarterly wage-growth and "
+            "inflation rate for the next two years. The dashed line "
+            "shows where cumulative real wages end up under your "
+            "scenario, starting from where the actual data leaves off."
+        ),
     )
+
+    # Preset scenarios — saves the busy reader from picking three numbers.
+    # Each preset writes the same session_state keys the sliders use, so
+    # the next rerun shows the preset values in the controls. We use one
+    # key namespace (no `value=` on the widgets) because mixing `value=`
+    # and `key=` on a Streamlit widget makes preset clicks silently fail.
+    PRESETS = {
+        "RBA-aligned":  dict(scen_wage=0.9, scen_inflation=0.6, scen_target=3.0),
+        "Optimistic":   dict(scen_wage=1.2, scen_inflation=0.5, scen_target=3.0),
+        "Pessimistic":  dict(scen_wage=0.6, scen_inflation=1.1, scen_target=3.0),
+    }
+    for k, v in PRESETS["RBA-aligned"].items():
+        st.session_state.setdefault(k, v)
+
+    p1, p2, p3, p4 = st.columns([1, 1, 1, 1])
+    with p1:
+        if st.button("RBA-aligned", width="stretch", help="Centre-of-fan scenario"):
+            st.session_state.update(PRESETS["RBA-aligned"])
+            st.rerun()
+    with p2:
+        if st.button("Optimistic", width="stretch", help="Strong WPI, easing CPI"):
+            st.session_state.update(PRESETS["Optimistic"])
+            st.rerun()
+    with p3:
+        if st.button("Pessimistic", width="stretch", help="Soft WPI, sticky CPI"):
+            st.session_state.update(PRESETS["Pessimistic"])
+            st.rerun()
+    with p4:
+        if st.button("Reset", width="stretch"):
+            st.session_state.update(PRESETS["RBA-aligned"])
+            st.rerun()
 
     cw, ci, ct = st.columns([1, 1, 1])
     with cw:
         scen_wage = st.slider(
             "Hypothetical quarterly wage growth (%)",
-            min_value=0.0, max_value=2.0, value=0.9, step=0.1,
+            min_value=0.0, max_value=2.0, step=0.1,
             help="Average QoQ wage growth across the period was about 0.85%.",
+            key="scen_wage",
         )
     with ci:
         scen_inflation = st.slider(
             "Hypothetical quarterly inflation (%)",
-            min_value=0.0, max_value=2.0, value=0.7, step=0.1,
+            min_value=0.0, max_value=2.0, step=0.1,
             help="Average QoQ inflation across the period was about 0.7%.",
+            key="scen_inflation",
         )
     with ct:
         target = st.number_input(
             "Recovery target — cumulative real-wage gain (%)",
-            min_value=-5.0, max_value=10.0, value=3.0, step=0.5,
+            min_value=-5.0, max_value=10.0, step=0.5,
             help="How much cumulative real-wage growth counts as 'recovered'?",
+            key="scen_target",
         )
 
     # Project 8 quarters forward from the last actual quarter. The
@@ -642,13 +871,13 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
 
 def section_call_to_action() -> None:
     """Closing — three stakeholder lenses on the same story."""
-    st.markdown("## Chapter 5 — So What Should Anyone Do About It?")
-    st.markdown(
-        '<p class="narrative">'
-        "The same data carries a different obligation depending on whose "
-        "desk it lands on."
-        "</p>",
-        unsafe_allow_html=True,
+    chapter_header(
+        num=5, arc="What Next", anchor="ch5",
+        title="So What Should Anyone Do About It?",
+        lede=(
+            "The same data carries a different obligation depending on "
+            "whose desk it lands on."
+        ),
     )
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -710,6 +939,29 @@ def main() -> None:
         selected_quarter = st.select_slider(
             "Spotlight quarter", options=quarters, value=quarters[-1],
         )
+
+        with st.expander("Glossary", expanded=False):
+            st.markdown(
+                "**WPI** — Wage Price Index. ABS series tracking the price "
+                "of labour, holding job mix constant.\n\n"
+                "**CPI** — Consumer Price Index. ABS series tracking the "
+                "price of a representative basket of household goods.\n\n"
+                "**Nominal wage** — the dollar number on your payslip.\n\n"
+                "**Real wage** — nominal wage adjusted for CPI. The "
+                "purchasing-power view of pay.\n\n"
+                "**QoQ** — quarter-on-quarter percentage change. All rates "
+                "in this story are QoQ unless stated otherwise."
+            )
+
+        with st.expander("Data & sources", expanded=False):
+            st.markdown(
+                "- ABS Cat. **6345.0** — Wage Price Index (Tables 1, 2b)\n"
+                "- ABS Cat. **6401.0** — Consumer Price Index (Table 18)\n"
+                "- Coverage: **2023 Q4 → 2025 Q4**, 8 states/territories\n"
+                "- Joining: WPI per state + national CPI broadcast across "
+                "states in long format. See README for full data dictionary."
+            )
+
         st.markdown("---")
         st.markdown(
             '<p style="color:#6b7280;font-size:0.85rem;">'
@@ -719,16 +971,14 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
+    chapter_nav()
     section_hero(df)
+    section_tldr(df)
     st.markdown('<hr class="section-divider" />', unsafe_allow_html=True)
     section_what_national(df, selected_quarter)
-    st.markdown('<hr class="section-divider" />', unsafe_allow_html=True)
     section_what_state(df, selected_quarter)
-    st.markdown('<hr class="section-divider" />', unsafe_allow_html=True)
     section_so_what_drivers(df)
-    st.markdown('<hr class="section-divider" />', unsafe_allow_html=True)
     section_what_next_whatif(df)
-    st.markdown('<hr class="section-divider" />', unsafe_allow_html=True)
     section_call_to_action()
 
 
