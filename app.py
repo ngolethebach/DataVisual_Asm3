@@ -676,7 +676,7 @@ def section_what_state(df: pd.DataFrame, selected_quarter: str) -> None:
     )
 
 
-def section_so_what_drivers(df: pd.DataFrame) -> None:
+def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
     """So What — what's actually driving inflation? Food, housing,
     transport CPI sub-indices over time. Stacked area shows shape;
     final-quarter horizontal bars show levels."""
@@ -819,46 +819,26 @@ def section_so_what_drivers(df: pd.DataFrame) -> None:
     housing_gap = abs(cum_housing - cum_all)
 
     st.markdown(
-        f'<div class="pull-quote">Over nine quarters, housing costs rose '
-        f"a total of <strong>{cum_housing:+.1f}%</strong>, food "
-        f"<strong>{cum_food:+.1f}%</strong>, and transport "
-        f"<strong>{cum_transport:+.1f}%</strong> \u2014 but the overall "
-        f"average used to adjust government payments was only "
-        f"<strong>{cum_all:+.1f}%</strong>. That means rent assistance "
-        f"adjustments have lagged actual housing costs by roughly "
-        f"<strong>{housing_gap:.1f} percentage points</strong> "
-        f"over this period.</div>",
-        unsafe_allow_html=True,
-    )
-
-    # --- So What transition moment ---
-    st.markdown('<hr class="section-divider" />', unsafe_allow_html=True)
-    st.markdown(
-        '<p class="narrative" style="font-size:1.25rem; font-weight:600; '
-        'color:#1f2937; max-width:60ch; margin: 1rem 0;">'
-        f"Real wage growth over nine quarters: "
-        f"<strong>{nat['real_wage_growth'].sum():+.1f}%</strong>. "
-        f"Housing costs over the same period: "
-        f"<strong>{cum_housing:+.1f}%</strong>. "
-        "The payslip grew. What it buys \u2014 especially for anyone "
-        "paying rent \u2014 didn\u2019t keep up. The question isn\u2019t whether "
-        "the gap exists. It\u2019s when and how it closes."
-        "</p>",
-        unsafe_allow_html=True,
-    )
-
-    # Cumulative impact sentence — strongest single line in the section.
-    cum_food = nat["food"].sum()
-    cum_housing = nat["housing"].sum()
-    cum_transport = nat["transport"].sum()
-    cum_all = nat["inflation_rate"].sum()
-    st.markdown(
-        f'<div class="pull-quote">Over nine quarters, housing prices '
-        f"climbed a cumulative <strong>{cum_housing:+.1f}%</strong>, food "
-        f"<strong>{cum_food:+.1f}%</strong>, and transport "
-        f"<strong>{cum_transport:+.1f}%</strong> — against a headline CPI "
-        f"of <strong>{cum_all:+.1f}%</strong>. The averages hide the "
-        f"categories that hurt most.</div>",
+        f'<div style="background:#fffbeb; border-left:4px solid #f59e0b; '
+        f'border-radius:8px; padding:1.5rem 1.5rem; margin:1.5rem 0;">'
+        f'<p style="font-family:Georgia,serif; font-size:1.35rem; '
+        f'font-weight:700; color:#1f2937; margin:0 0 0.75rem 0; line-height:1.3;">'
+        f"Australians got a pay rise. Inflation took it back."
+        f"</p>"
+        f'<p style="font-size:1rem; line-height:1.7; color:#374151; margin:0;">'
+        f"Over 9 quarters — Housing surged <strong>{cum_housing:+.1f}%</strong> · "
+        f"Food climbed <strong>{cum_food:+.1f}%</strong> · "
+        f"Transport jumped <strong>{cum_transport:+.1f}%</strong>"
+        f"</p>"
+        f'<p style="font-size:1rem; line-height:1.7; color:#374151; margin:0.5rem 0 0 0;">'
+        f"Yet the indexation rate used to adjust rent assistance, "
+        f"JobSeeker, and the Age Pension was just "
+        f"<strong>{cum_all:+.1f}%</strong>. "
+        f"That leaves a <strong>{housing_gap:.1f}-point blind spot</strong> "
+        f"on housing alone — the single largest expense for the people "
+        f"these payments are designed to protect."
+        f"</p>"
+        f"</div>",
         unsafe_allow_html=True,
     )
 
@@ -1013,7 +993,7 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
     )
 
 
-def section_call_to_action() -> None:
+def section_call_to_action(df: pd.DataFrame) -> None:
     """Closing — 3 recomendations for the Treasury analyst."""
     nat = national_series(df)
     cum_housing = nat["housing"].sum()
@@ -1143,9 +1123,9 @@ def main() -> None:
     st.markdown('<hr class="section-divider" />', unsafe_allow_html=True)
     section_what_national(df, selected_quarter)
     section_what_state(df, selected_quarter)
-    section_so_what_drivers(df)
+    section_so_what_drivers(df, selected_quarter)
     section_what_next_whatif(df)
-    section_call_to_action()
+    section_call_to_action(df)
 
 
 if __name__ == "__main__":
