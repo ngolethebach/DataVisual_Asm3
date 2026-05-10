@@ -194,6 +194,17 @@ st.markdown(
       .section-divider {
         height: 1px; background: #d1d5db; margin: 3rem 0 2rem 0;
         border: none;
+      }.policy-rec {
+        background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+        padding: 1.5rem; margin: 1.5rem 0; max-width: 65ch;
+      }
+      .policy-rec .rec-label {
+        font-family: Georgia, "Times New Roman", serif;
+        color: #059669; font-size: 1.25rem; font-weight: 700;
+        margin-bottom: 0.5rem; line-height: 1.3;
+      }
+      .policy-rec .rec-body {
+        font-size: 0.95rem; line-height: 1.6; color: #374151;
       }
     </style>
     """,
@@ -348,11 +359,11 @@ def chapter_nav() -> None:
     """Sticky pill nav linking to each chapter anchor. Browsers handle
     the scroll natively — no JS required, no Streamlit reruns."""
     items = [
-        ("ch1", "1 · Headline lies"),
-        ("ch2", "2 · Eight Australias"),
-        ("ch3", "3 · Where money went"),
-        ("ch4", "4 · Recovery scenarios"),
-        ("ch5", "5 · So what now?"),
+        ("ch1", "1 · The gap"),
+        ("ch2", "2 · State by state"),
+        ("ch3", "3 · What\u2019s getting expensive"),
+        ("ch4", "4 · What if"),
+        ("ch5", "5 · What should change?"),
     ]
     pills = "".join(
         f'<a href="#{anchor}">{label}</a>' for anchor, label in items
@@ -383,27 +394,30 @@ def section_hero(df: pd.DataFrame) -> None:
     st.markdown("# Real Wages, Real Lives")
     st.markdown(
         '<p class="narrative">'
-        "Between late 2023 and the end of 2025, the headlines told a "
-        "reassuring story: wages were growing. The number on your payslip "
-        "was getting bigger. And yet, for most Australians, life kept "
-        "getting more expensive faster than the paycheck could keep up. "
-        "This is the gap between the <em>nominal</em> wage and the "
-        "<em>real</em> wage — and over nine quarters, that gap has a shape."
+        "Between late 2023 and the end of 2025, wages were growing. "
+        "The number on the payslip was getting bigger. But prices were "
+        "rising faster \u2014 and over nine quarters, the gap between what "
+        "Australians earned and what they could actually buy with it "
+        f"adds up to just <strong>{cum_real:+.1f}%</strong> in real terms. "
+        "That\u2019s the difference between the wage on paper and the wage "
+        "in practice."
         "</p>",
         unsafe_allow_html=True,
     )
 
     st.markdown(
-        f'<div class="hero-stat">{n_negative} of {n_total}</div>'
+        f'<div class="hero-stat">{n_negative} of {n_total}</div> </p>'
         '<p class="narrative" style="margin-top:-0.5rem;">'
-        "quarters in which the average Australian worker went "
-        "<strong>backwards</strong> in real terms — wage growth slower than "
-        f"inflation. Cumulative real wage growth across the period: "
-        f"<strong>{cum_real:+.1f}%</strong>."
+        "quarters where wage growth didn\u2019t keep up with inflation. "
+        "In those quarters, every dollar earned bought less than the "
+        "quarter before. This matters for policy because government "
+        "payments like rent assistance and pensions are adjusted based "
+        "on these numbers \u2014 and if the adjustment formula doesn\u2019t "
+        "reflect reality, the payments fall behind too."
         "</p>"
         '<div class="persona-badge">'
-        '<span class="persona-label">Built for</span>'
-        "Treasury Policy Analyst · federal cost-of-living desk"
+        '<span class="persona-label">Prepared for</span>'
+        "Treasury Policy Analyst"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -430,30 +444,32 @@ def section_tldr(df: pd.DataFrame) -> None:
     c1, c2, c3 = st.columns(3, gap="medium")
     with c1:
         st.markdown(tldr_card(
-            "What",
-            "Wages grew. Real wages didn't.",
-            f"Cumulative real-wage growth over the nine quarters of "
-            f"data is <strong>{cum_real:+.1f}%</strong>. Inflation took "
-            "back almost everything wage-setting gave.",
+            "The Gap",
+            "Wages grew. Real wages barely moved.",
+            f"Over nine quarters, real wage growth totalled just "
+            f"<strong>{cum_real:+.1f}%</strong>. Inflation clawed back "
+            "almost everything that wage growth delivered.",
             stripe=PALETTE["wage"],
         ), unsafe_allow_html=True)
     with c2:
         st.markdown(tldr_card(
-            "So what",
-            "Housing did the damage.",
-            f"Housing CPI rose a cumulative <strong>{cum_housing:+.1f}%</strong> "
-            "across the period — the single biggest driver of the gap "
-            "between the headline wage rise and lived experience.",
+            "The Driver",
+            "Housing costs did most of the damage.",
+            f"Housing prices rose <strong>{cum_housing:+.1f}%</strong> "
+            "over the period \u2014 well above the overall average. "
+            "Government payments adjusted to the average rate have "
+            "fallen behind the cost that matters most.",
             stripe=PALETTE["housing"],
         ), unsafe_allow_html=True)
     with c3:
         st.markdown(tldr_card(
-            "What next",
-            "The federation isn't recovering at one speed.",
-            f"In {last_q['quarter']}, {leader_state_q['state_name']} sits "
-            f"{state_spread:.1f} index points ahead of "
-            f"{laggard_state_q['state_name']} on the WPI. Recovery policy "
-            "needs to land state by state, not in averages.",
+            "The Uneven Recovery",
+            "Not every state is in the same position.",
+            f"In {last_q['quarter']}, there\u2019s a "
+            f"<strong>{state_spread:.1f}-point</strong> gap between "
+            f"{leader_state_q['state_name']} and "
+            f"{laggard_state_q['state_name']} on the wage index. "
+            "A one-size-fits-all national policy can\u2019t address that.",
             stripe=PALETTE["positive"],
         ), unsafe_allow_html=True)
 
@@ -468,11 +484,12 @@ def section_what_national(df: pd.DataFrame, selected_quarter: str) -> None:
         num=1, arc="What", anchor="ch1",
         title="The Headline Number Lies",
         lede=(
-            "ABS publishes two numbers every quarter. The Wage Price "
-            "Index tells you how fast pay is rising. The Consumer Price "
-            "Index tells you how fast your shopping basket is rising. "
-            "Most reporting quotes one or the other in isolation. The "
-            "story emerges when you put them on the same axis."
+            "Every quarter, the ABS releases two key numbers: how fast "
+            "wages are growing, and how fast prices are rising. Most "
+            "reporting covers them separately. The real story only "
+            "appears when you put them on the same chart \u2014 because "
+            "it\u2019s the gap between the two that determines whether "
+            "workers are getting ahead or falling behind."
         ),
     )
 
@@ -530,12 +547,12 @@ def section_what_national(df: pd.DataFrame, selected_quarter: str) -> None:
     with c1:
         st.markdown(kpi_card(
             "Selected quarter", selected_quarter,
-            "Use the sidebar slider to scrub.",
+            "Adjust using the sidebar slider.",
         ), unsafe_allow_html=True)
     with c2:
         st.markdown(kpi_card(
             "Wage growth (QoQ)", f"{sel_row['wage_growth']:+.1f}%",
-            "ABS WPI, all sectors, original.",
+            "ABS Wage Price Index, all sectors.",
         ), unsafe_allow_html=True)
     with c3:
         st.markdown(kpi_card(
@@ -544,7 +561,7 @@ def section_what_national(df: pd.DataFrame, selected_quarter: str) -> None:
         ), unsafe_allow_html=True)
     with c4:
         st.markdown(kpi_card(
-            "Real wage Δ", f"{real_delta:+.1f}%",
+            "Real wage change", f"{real_delta:+.1f}%",
             f"Workers were {delta_word} the cost of living.",
         ), unsafe_allow_html=True)
 
@@ -561,9 +578,11 @@ def section_what_state(df: pd.DataFrame, selected_quarter: str) -> None:
         lede=(
             "National averages flatten everything. Tasmania pays "
             "differently from the ACT; Queensland tracks differently "
-            "from Western Australia. The Wage Price Index — re-based "
-            "to 100 in Sep 2008 — shows where each state has gotten "
-            "to. Hover any bubble for the full numbers."
+            "from Western Australia. The Wage Price Index "
+            "by state shows where each jurisdiction has landed \u2014 and "
+            "the spread between the highest and lowest matters, because "
+            "national policy settings (minimum wage, pension rates, "
+            "rent assistance) apply the same rate everywhere."
         ),
     )
 
@@ -667,41 +686,166 @@ def section_so_what_drivers(df: pd.DataFrame) -> None:
         num=3, arc="So What", anchor="ch3",
         title="Where the Money Actually Went",
         lede=(
-            "When CPI says &ldquo;inflation was 0.6% this quarter,&rdquo; "
-            "that 0.6% is an average across hundreds of categories. Some "
-            "are flat. Some are catastrophic. For renters and commuters, "
-            "the headline rate underweights the line items that actually "
-            "determine whether the month ends in the black."
+            "When the news says \u201Cinflation was 0.6% this quarter,\u201D "
+            "that\u2019s an average across hundreds of things. Some barely "
+            "moved. Others spiked. For anyone paying rent, buying "
+            "groceries, or commuting to work, the headline average "
+            "understates what they\u2019re actually experiencing. Use the "
+            "toggles below to see how each category compares to the "
+            "overall average."
         ),
     )
 
+    # --- Category toggles ---
+    st.markdown(
+        '<p style="color:#6b7280; font-size:0.85rem; margin-bottom:0.25rem;">'
+        "Toggle categories to compare against the All Groups average:"
+        "</p>",
+        unsafe_allow_html=True,
+    )
+
+    toggle_cols = st.columns(3)
+    with toggle_cols[0]:
+        show_housing = st.checkbox(
+            "\U0001f3e0 Housing", value=False, key="toggle_housing",
+        )
+    with toggle_cols[1]:
+        show_food = st.checkbox(
+            "\U0001f6d2 Food", value=False, key="toggle_food",
+        )
+    with toggle_cols[2]:
+        show_transport = st.checkbox(
+            "\U0001f697 Transport", value=False, key="toggle_transport",
+        )
+
+    # --- Build chart ---
     fig = go.Figure()
-    for col, name in [("housing", "Housing"),
-                      ("food", "Food & non-alc."),
-                      ("transport", "Transport")]:
-        fig.add_trace(go.Scatter(
-            x=nat["quarter"], y=nat[col],
-            mode="lines+markers",
-            name=name,
-            line=dict(color=PALETTE[col], width=2.5),
-            marker=dict(size=7),
-            hovertemplate=f"<b>%{{x}}</b><br>{name}: %{{y:+.1f}}%<extra></extra>",
-        ))
+
+    # Always show the All Groups CPI baseline as a dotted reference line
     fig.add_trace(go.Scatter(
         x=nat["quarter"], y=nat["inflation_rate"],
-        mode="lines", name="All Groups CPI",
-        line=dict(color=PALETTE["ink"], width=2, dash="dash"),
+        mode="lines+markers", name="All Groups CPI (average)",
+        line=dict(color=PALETTE["muted"], width=2, dash="dot"),
+        marker=dict(size=5, symbol="circle-open"),
         hovertemplate="<b>%{x}</b><br>All Groups CPI: %{y:+.1f}%<extra></extra>",
     ))
+    categories_config = [
+        ("housing", "Housing", PALETTE["housing"], show_housing),
+        ("food", "Food & non-alcoholic beverages", PALETTE["food"], show_food),
+        ("transport", "Transport", PALETTE["transport"], show_transport),
+    ]
+
+    any_selected = show_housing or show_food or show_transport
+
+    for col, name, color, is_visible in categories_config:
+        if is_visible:
+            fig.add_trace(go.Scatter(
+                x=nat["quarter"], y=nat[col],
+                mode="lines+markers",
+                name=name,
+                line=dict(color=color, width=3),
+                marker=dict(size=8),
+                hovertemplate=(
+                    f"<b>%{{x}}</b><br>{name}: %{{y:+.1f}}%<extra></extra>"
+                ),
+            ))
+
+    # If nothing is toggled, show all categories faintly as a preview
+    if not any_selected:
+        for col, name, color, _ in categories_config:
+            fig.add_trace(go.Scatter(
+                x=nat["quarter"], y=nat[col],
+                mode="lines",
+                name=name,
+                line=dict(color=color, width=1.5, dash="dot"),
+                opacity=0.35,
+                hovertemplate=(
+                    f"<b>%{{x}}</b><br>{name}: %{{y:+.1f}}%<extra></extra>"
+                ),
+            ))
+
+    chart_title = "CPI by category \u2014 quarter-on-quarter change"
+    if any_selected:
+        selected_names = []
+        if show_housing:
+            selected_names.append("Housing")
+        if show_food:
+            selected_names.append("Food")
+        if show_transport:
+            selected_names.append("Transport")
+        chart_title = (
+            f"{', '.join(selected_names)} vs All Groups average"
+        )
+
     fig.update_layout(
-        title=dict(
-            text="QoQ % change — CPI sub-categories vs headline",
-            x=0, font=dict(size=16),
-        ),
-        yaxis_title="QoQ % change",
+        title=dict(text=chart_title, x=0, font=dict(size=16)),
+        yaxis_title="Quarter-on-quarter change (%)",
     )
     _apply_chart_theme(fig, height=440)
     st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+
+    # --- KPI cards for selected quarter ---
+    sel_row = nat[nat["quarter"] == selected_quarter].iloc[0]
+    k1, k2, k3, k4 = st.columns(4)
+    with k1:
+        st.markdown(kpi_card(
+            "Selected quarter", selected_quarter,
+            "Adjust using the sidebar slider.",
+        ), unsafe_allow_html=True)
+    with k2:
+        housing_vs_avg = sel_row["housing"] - sel_row["inflation_rate"]
+        st.markdown(kpi_card(
+            "🏠 Housing", f"{sel_row['housing']:+.1f}%",
+            f"{housing_vs_avg:+.1f}% vs All Groups average.",
+        ), unsafe_allow_html=True)
+    with k3:
+        food_vs_avg = sel_row["food"] - sel_row["inflation_rate"]
+        st.markdown(kpi_card(
+            "🛒 Food", f"{sel_row['food']:+.1f}%",
+            f"{food_vs_avg:+.1f}% vs All Groups average.",
+        ), unsafe_allow_html=True)
+    with k4:
+        transport_vs_avg = sel_row["transport"] - sel_row["inflation_rate"]
+        st.markdown(kpi_card(
+            "🚗 Transport", f"{sel_row['transport']:+.1f}%",
+            f"{transport_vs_avg:+.1f}% vs All Groups average.",
+        ), unsafe_allow_html=True)
+
+    # --- Cumulative summary ---
+    cum_food = nat["food"].sum()
+    cum_housing = nat["housing"].sum()
+    cum_transport = nat["transport"].sum()
+    cum_all = nat["inflation_rate"].sum()
+    housing_gap = abs(cum_housing - cum_all)
+
+    st.markdown(
+        f'<div class="pull-quote">Over nine quarters, housing costs rose '
+        f"a total of <strong>{cum_housing:+.1f}%</strong>, food "
+        f"<strong>{cum_food:+.1f}%</strong>, and transport "
+        f"<strong>{cum_transport:+.1f}%</strong> \u2014 but the overall "
+        f"average used to adjust government payments was only "
+        f"<strong>{cum_all:+.1f}%</strong>. That means rent assistance "
+        f"adjustments have lagged actual housing costs by roughly "
+        f"<strong>{housing_gap:.1f} percentage points</strong> "
+        f"over this period.</div>",
+        unsafe_allow_html=True,
+    )
+
+    # --- So What transition moment ---
+    st.markdown('<hr class="section-divider" />', unsafe_allow_html=True)
+    st.markdown(
+        '<p class="narrative" style="font-size:1.25rem; font-weight:600; '
+        'color:#1f2937; max-width:60ch; margin: 1rem 0;">'
+        f"Real wage growth over nine quarters: "
+        f"<strong>{nat['real_wage_growth'].sum():+.1f}%</strong>. "
+        f"Housing costs over the same period: "
+        f"<strong>{cum_housing:+.1f}%</strong>. "
+        "The payslip grew. What it buys \u2014 especially for anyone "
+        "paying rent \u2014 didn\u2019t keep up. The question isn\u2019t whether "
+        "the gap exists. It\u2019s when and how it closes."
+        "</p>",
+        unsafe_allow_html=True,
+    )
 
     # Cumulative impact sentence — strongest single line in the section.
     cum_food = nat["food"].sum()
@@ -718,7 +862,6 @@ def section_so_what_drivers(df: pd.DataFrame) -> None:
         unsafe_allow_html=True,
     )
 
-
 def section_what_next_whatif(df: pd.DataFrame) -> None:
     """What Next — a what-if projector. Reader sets a hypothetical
     quarterly wage-growth and inflation rate; we project the cumulative
@@ -731,10 +874,11 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
         num=4, arc="What Next", anchor="ch4",
         title="When Do Real Wages Recover?",
         lede=(
-            "Pull the levers below to set a quarterly wage-growth and "
-            "inflation rate for the next two years. The dashed line "
-            "shows where cumulative real wages end up under your "
-            "scenario, starting from where the actual data leaves off."
+            "Use the sliders below to set a hypothetical wage growth "
+            "rate and inflation rate for the next two years. The dashed "
+            "line shows where cumulative real wages would end up under "
+            "your scenario \u2014 starting from where the actual data "
+            "leaves off."
         ),
     )
 
@@ -870,48 +1014,70 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
 
 
 def section_call_to_action() -> None:
-    """Closing — three stakeholder lenses on the same story."""
+    """Closing — 3 recomendations for the Treasury analyst."""
+    nat = national_series(df)
+    cum_housing = nat["housing"].sum()
+    cum_all = nat["inflation_rate"].sum()
+    housing_gap = abs(cum_housing - cum_all)
+
     chapter_header(
         num=5, arc="What Next", anchor="ch5",
-        title="So What Should Anyone Do About It?",
+        title="What Should Change?",
         lede=(
-            "The same data carries a different obligation depending on "
-            "whose desk it lands on."
+            "The data across the previous four chapters points to a "
+            "clear mismatch: the way government payments are adjusted "
+            "for inflation doesn\u2019t reflect the actual cost pressures "
+            "households face \u2014 especially on housing."
         ),
     )
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown(
-            "### For the policymaker\n"
-            "Headline wage growth is not a substitute for real income "
-            "growth. Forecasts should track the gap, not just the "
-            "numerator. Sub-category CPI is where rent assistance and "
-            "fuel-tax decisions live."
-        )
-    with c2:
-        st.markdown(
-            "### For the journalist\n"
-            "\"Wages up 0.7%\" is not the headline. The headline is the "
-            "delta against inflation, and the delta against the categories "
-            "your readers actually spend on. Lead with the gap."
-        )
-    with c3:
-        st.markdown(
-            "### For the household\n"
-            "Your perception that things got harder is not vibes. Across "
-            "nine quarters, real wages crawled. The recovery, if it comes, "
-            "depends on which of the three sliders above moves."
-        )
 
-    st.markdown(
-        '<p class="narrative" style="margin-top:2rem;">'
-        "<strong>Data:</strong> Australian Bureau of Statistics — Wage "
-        "Price Index (cat. 6345.0) and Consumer Price Index (cat. 6401.0), "
-        "joined per state/territory. See <code>data/wage_inflation.csv</code> "
-        "and the README data dictionary for full provenance."
-        "</p>",
-        unsafe_allow_html=True,
-    )
+    r1, r2, r3 = st.columns(3, gap="medium")
+    with r1:
+        st.markdown(
+            '<div class="policy-rec">'
+            '<div class="rec-label">Recommendation 1: Fix the adjustment formula</div>'
+            '<div class="rec-body">'
+            "Government payments like rent assistance, JobSeeker, and the "
+            "Age Pension are currently adjusted based on the overall "
+            "inflation average. But housing costs have risen "
+            f"<strong>{cum_housing:+.1f}%</strong> over this period — "
+            f"<strong>{housing_gap:.1f} percentage points</strong> above "
+            "that average. <br><br> The adjustment formula should be reviewed to "
+            "account for the specific costs that hit hardest, not just "
+            "the average across everything."
+            "</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+    with r2:
+        st.markdown(
+            '<div class="policy-rec">'
+            '<div class="rec-label">Recommendation 2: Account for state differences</div>'
+            '<div class="rec-body">'
+            "The wage index varies significantly across states — as shown "
+            "in Chapter 2. But the minimum wage and payment rates are set "
+            "nationally. <br><br> Treasury should model what it would look like to "
+            "adjust payment rates by state, so that the same dollar amount "
+            "doesn't mean very different things in Tasmania versus the ACT."
+            "</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+    with r3:
+        st.markdown(
+            '<div class="policy-rec">'
+            '<div class="rec-label">Recommendation 3: Track the gap, not just the number</div>'
+            '<div class="rec-body">'
+            "Currently, the Cost-of-Living desk tracks wage growth and "
+            "inflation separately. The gap between them — real wage growth "
+            "— should be a standing metric in every quarterly report. <br><br> The "
+            "scenario tool in Chapter 4 shows how this could work in "
+            "practice: set a recovery target, model different paths, "
+            "and track whether policy is closing the gap or widening it."
+            "</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -931,7 +1097,7 @@ def main() -> None:
         st.markdown("### Story controls")
         st.markdown(
             '<p style="color:#6b7280;font-size:0.9rem;">'
-            "Scrub the slider to move the spotlight quarter on the "
+            "Move the slider to change the spotlight quarter on the "
             "national timeline and the state map."
             "</p>",
             unsafe_allow_html=True,
