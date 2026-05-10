@@ -2,6 +2,17 @@
 
 Hey team — feel free to use **`data/wage_inflation.csv`** for the assignment. It's a single tidy long-format file that's ready to drop straight into Streamlit, Tableau, Power BI, pandas, or anything else. No further cleaning needed.
 
+## How to run
+
+```bash
+git clone git@github.com:ngolethebach/DataVisual_Asm3.git
+cd DataVisual_Asm3
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+The app will open in your browser at `http://localhost:8501`.
+
 - **File:** `data/wage_inflation.csv`
 - **Shape:** 72 rows × 15 columns
 - **Coverage:** 9 quarters (2023 Q4 → 2025 Q4) × 8 states/territories (NSW, VIC, QLD, SA, WA, TAS, NT, ACT)
