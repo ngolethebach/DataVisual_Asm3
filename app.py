@@ -1174,7 +1174,6 @@ def section_call_to_action(df: pd.DataFrame) -> None:
         ),
     )
 
-
     r1, r2, r3 = st.columns(3, gap="medium")
     with r1:
         st.markdown(
