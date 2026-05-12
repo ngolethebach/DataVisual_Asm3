@@ -1,5 +1,5 @@
 """
-Real Wages, Real Lives — Australia's Cost-of-Living Story (2023 Q4 → 2025 Q4).
+Real Wages, Real Lives — Australia's Cost-of-Living Story (Q4 2023 → Q4 2025).
 
 A data narrative built for the UTS Data Visualisation studio (Asm3).
 Walks the audience through the gap between headline wage growth and
@@ -235,7 +235,7 @@ st.markdown(
       }
       .policy-rec {
         background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
-        padding: 1.5rem; margin: 1.5rem 0; max-width: 65ch;
+        padding: 1.5rem 1.75rem; margin: 1rem 0;
       }
       .policy-rec .rec-label {
         font-family: Georgia, "Times New Roman", serif;
@@ -269,6 +269,9 @@ def load_data() -> pd.DataFrame:
     untouched.
     """
     df = pd.read_csv(DATA_PATH, parse_dates=["quarter_date"])
+    # Display format: "Q4 2023" reads more naturally than "2023 Q4" for
+    # the audience. Built from clean integer columns, not a string parse.
+    df["quarter"] = "Q" + df["quarter_num"].astype(str) + " " + df["year"].astype(str)
     # National series is identical across the 8 state rows per quarter,
     # so drop_duplicates gives us a single national timeline.
     nat = (
@@ -441,12 +444,16 @@ def section_hero(df: pd.DataFrame) -> None:
             "Between late 2023 and the end of 2025, nominal wages continued "
             "to increase, reflecting ongoing growth in headline earnings."
             " However, this growth was outpaced by rising prices."
-            " Over nine consecutive quarters, the divergence between wage growth "
-            "and inflation resulted in only a +1.1% increase in real wages. "
+            f" Over {n_total} consecutive quarters, the divergence between wage growth "
+            f"and inflation resulted in only a {cum_real:+.1f}% increase in real wages. "
             "This highlights a persistent gap between reported income growth "
             "and actual purchasing power — the distinction between wages "
             "as measured on paper and wages in practical, real-world terms."
-            "</p>",
+            "</p>"
+            '<div class="persona-badge">'
+            '<span class="persona-label">Prepared for</span>'
+            "Treasury Policy Analyst"
+            "</div>",
             unsafe_allow_html=True,
         )
     with right:
@@ -501,7 +508,7 @@ def section_tldr(df: pd.DataFrame) -> None:
             tldr_card(
                 "The Gap",
                 "Inflation constrained growth in real wage.",
-                f"Over the nine-quarter period, real wage growth totalled "
+                f"Over the {len(nat)}-quarter period, real wage growth totalled "
                 f"<strong>{cum_real:+.1f}%</strong>. Elevated inflation "
                 "substantially offset nominal wage gains, limiting improvements"
                 " in household purchasing power. Thus overall improvement in "
@@ -874,25 +881,28 @@ def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
                     y=nat[col],
                     mode="lines+markers",
                     name=name,
-                    line=dict(color=color, width=3),
-                    marker=dict(size=8),
+                    line=dict(color=color, width=4),
+                    marker=dict(size=9),
                     hovertemplate=(
                         f"<b>%{{x}}</b><br>{name}: %{{y:+.1f}}%<extra></extra>"
                     ),
                 )
             )
 
-    # If nothing is toggled, show all categories faintly as a preview
+    # If nothing is toggled, show all categories as a preview. Solid +
+    # heavier than the previous dotted/0.35-opacity pass — the old version
+    # read as pastel and was hard to follow against the All-Groups baseline.
     if not any_selected:
         for col, name, color, _ in categories_config:
             fig.add_trace(
                 go.Scatter(
                     x=nat["quarter"],
                     y=nat[col],
-                    mode="lines",
+                    mode="lines+markers",
                     name=name,
-                    line=dict(color=color, width=1.5, dash="dot"),
-                    opacity=0.35,
+                    line=dict(color=color, width=3),
+                    marker=dict(size=7),
+                    opacity=0.9,
                     hovertemplate=(
                         f"<b>%{{x}}</b><br>{name}: %{{y:+.1f}}%<extra></extra>"
                     ),
@@ -959,7 +969,7 @@ def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
         f"Real wage gains were offset by rising living costs."
         f"</p>"
         f'<p style="font-size:1rem; line-height:1.7; color:#374151; margin:0;">'
-        f"Over 9 quarters — Housing surged <strong>{cum_housing:+.1f}%</strong> · "
+        f"Over {len(nat)} quarters — Housing surged <strong>{cum_housing:+.1f}%</strong> · "
         f"Food climbed <strong>{cum_food:+.1f}%</strong> · "
         f"Transport jumped <strong>{cum_transport:+.1f}%</strong>"
         f"</p>"
@@ -1028,6 +1038,9 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
             st.session_state.update(PRESETS["RBA-aligned"])
             st.rerun()
 
+    avg_wage = nat["wage_growth"].mean()
+    avg_inflation = nat["inflation_rate"].mean()
+
     cw, ci, ct = st.columns([1, 1, 1])
     with cw:
         scen_wage = st.slider(
@@ -1035,7 +1048,7 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
             min_value=0.0,
             max_value=2.0,
             step=0.1,
-            help="Average QoQ wage growth across the period was about 0.85%.",
+            help=f"Average QoQ wage growth across the period was about {avg_wage:.2f}%.",
             key="scen_wage",
         )
     with ci:
@@ -1044,7 +1057,7 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
             min_value=0.0,
             max_value=2.0,
             step=0.1,
-            help="Average QoQ inflation across the period was about 0.7%.",
+            help=f"Average QoQ inflation across the period was about {avg_inflation:.2f}%.",
             key="scen_inflation",
         )
     with ct:
@@ -1069,7 +1082,7 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
         if last_qn > 4:
             last_qn = 1
             last_year += 1
-        future_quarters.append(f"{last_year} Q{last_qn}")
+        future_quarters.append(f"Q{last_qn} {last_year}")
 
     scen_real = round(scen_wage - scen_inflation, 2)
     cum_so_far_r = round(cum_so_far, 2)
@@ -1114,7 +1127,7 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
             x=0,
             font=dict(size=16),
         ),
-        yaxis_title="Cumulative real wage Δ since 2023 Q4 (%)",
+        yaxis_title="Cumulative real wage Δ since Q4 2023 (%)",
     )
     _apply_chart_theme(fig, height=460)
     st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
@@ -1147,7 +1160,7 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
 
 
 def section_call_to_action(df: pd.DataFrame) -> None:
-    """Closing — 3 recomendations for the Treasury analyst."""
+    """Closing — 7 recommendations for the Treasury analyst."""
     nat = national_series(df)
     cum_housing = nat["housing"].sum()
     cum_all = nat["inflation_rate"].sum()
@@ -1169,12 +1182,11 @@ def section_call_to_action(df: pd.DataFrame) -> None:
         ),
     )
 
-    r1, r2, r3 = st.columns(3, gap="medium")
-    with r1:
-        st.markdown(
-            '<div class="policy-rec">'
-            '<div class="rec-label">Recommendation 1: Review indexation arrangements for income support payments</div>'
-            '<div class="rec-body">'
+    # Full-width vertical stack — each recommendation gets the page's
+    # full reading width so the stacked list scans as a single column.
+    recommendations = [
+        (
+            "Recommendation 1: Review indexation arrangements for income support payments",
             "Government payments like rent assistance, JobSeeker, and the "
             "Age Pension are currently adjusted based on the overall "
             "inflation average. But housing costs have risen "
@@ -1182,33 +1194,51 @@ def section_call_to_action(df: pd.DataFrame) -> None:
             f"<strong>{housing_gap:.1f} percentage points</strong> above "
             "that average. <br><br> The adjustment formula should be reviewed to "
             "account for the specific costs that hit hardest, not just "
-            "the average across everything."
-            "</div>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-    with r2:
-        st.markdown(
-            '<div class="policy-rec">'
-            '<div class="rec-label">Recommendation 2: Strengthen Commonwealth Rent Assistance adequacy</div>'
-            '<div class="rec-body">'
+            "the average across everything.",
+        ),
+        (
+            "Recommendation 2: Strengthen Commonwealth Rent Assistance adequacy",
             "Given the continued pressure on renters, Treasury should assess whether the maximum rate and eligibility "
             "thresholds for Commonwealth Rent Assistance remain adequate. The Economic Inclusion Advisory "
             "Committee has repeatedly recommended stronger support for low-income households, including increased "
-            "assistance for people relying on income support."
-            "</div>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-    with r3:
-        st.markdown(
-            '<div class="policy-rec">'
-            '<div class="rec-label">Recommendation 3: Incorporate jurisdiction-level analysis into policy modelling</div>'
-            '<div class="rec-body">'
+            "assistance for people relying on income support.",
+        ),
+        (
+            "Recommendation 3: Incorporate jurisdiction-level analysis into policy modelling",
             "Treasury should model how wage, inflation and housing pressures differ across states and territories. "
             "National payment settings may have different real-world effects across jurisdictions, particularly "
-            "where wage growth and housing costs diverge."
-            "</div>"
+            "where wage growth and housing costs diverge.",
+        ),
+        (
+            "Recommendation 4: Track real wage growth as a standing quarterly indicator",
+            "Treasury should report the gap between wage growth and inflation as a core quarterly measure. "
+            "This would provide a clearer indication of whether household purchasing power is improving or "
+            "declining, rather than relying on wage growth and CPI separately.",
+        ),
+        (
+            "Recommendation 5: Prioritise housing supply and planning reform",
+            "Longer-term cost-of-living relief requires addressing housing supply constraints. The Productivity "
+            "Commission has highlighted weak housing construction productivity and the need to reduce regulatory "
+            "burden, streamline approvals and support innovation in construction.",
+        ),
+        (
+            "Recommendation 6: Expand social and affordable housing investment",
+            "Treasury should continue to assess the role of social and affordable housing in reducing rental "
+            "stress. The National Housing Supply and Affordability Council has noted that social and affordable "
+            "housing supply is accelerating, but housing costs and rents remain elevated.",
+        ),
+        (
+            "Recommendation 7: Ensure cost-of-living relief is targeted and inflation-aware",
+            "Cost-of-living measures should be designed to support vulnerable households without adding materially "
+            "to aggregate demand. The RBA has noted that subsidies can lower headline inflation temporarily, but "
+            "their removal can later lift measured inflation.",
+        ),
+    ]
+    for label, body in recommendations:
+        st.markdown(
+            '<div class="policy-rec">'
+            f'<div class="rec-label">{label}</div>'
+            f'<div class="rec-body">{body}</div>'
             "</div>",
             unsafe_allow_html=True,
         )
@@ -1263,7 +1293,7 @@ def main() -> None:
             st.markdown(
                 "- ABS Cat. **6345.0** — Wage Price Index (Tables 1, 2b)\n"
                 "- ABS Cat. **6401.0** — Consumer Price Index (Table 18)\n"
-                "- Coverage: **2023 Q4 → 2025 Q4**, 8 states/territories\n"
+                "- Coverage: **Q4 2023 → Q4 2025**, 8 states/territories\n"
                 "- Joining: WPI per state + national CPI broadcast across "
                 "states in long format. See README for full data dictionary."
             )
