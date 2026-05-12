@@ -142,19 +142,31 @@ st.markdown(
         font-size: 0.88rem; color: #4b5563;
         padding-top: 0.7rem; border-top: 1px dashed #e5e7eb;
       }
-      .persona-badge {
-        display: inline-block; margin-top: 0.75rem;
-        padding: 0.35rem 0.85rem; border-radius: 999px;
-        background: #1f2937; color: #fafaf7;
-        font-size: 0.78rem; letter-spacing: 0.06em; font-weight: 600;
-      }
-      .persona-badge .persona-label {
-        color: #f59e0b; text-transform: uppercase; letter-spacing: 0.14em;
-        font-size: 0.68rem; margin-right: 0.5rem;
-      }
       .narrative {
         font-size: 1.1rem; line-height: 1.65; color: #374151;
         max-width: 65ch;
+      }
+      /* Report-metadata strip under the hero lede. Fills the visual gap
+         between the (shorter) prose column and the (taller) hero stat
+         card to its right, and gives the page a formal report-front-
+         matter feel — period, coverage, sources up top. */
+      .report-meta {
+        margin-top: 1.6rem; padding-top: 1.1rem;
+        border-top: 1px solid #e5e7eb;
+        display: grid; grid-template-columns: max-content 1fr;
+        gap: 0.55rem 1.5rem;
+        max-width: 60ch;
+      }
+      .report-meta dt {
+        margin: 0; align-self: center;
+        text-transform: uppercase; letter-spacing: 0.12em;
+        color: #6b7280; font-weight: 700; font-size: 0.7rem;
+        font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      }
+      .report-meta dd {
+        margin: 0; align-self: center;
+        color: #1f2937; font-family: Georgia, serif;
+        font-size: 0.95rem; line-height: 1.45;
       }
       .chapter-lede {
         font-size: 1.12rem; line-height: 1.7; color: #374151;
@@ -200,28 +212,11 @@ st.markdown(
         color: #1f2937; margin-top: 0.2rem;
       }
       .kpi-sub { color: #6b7280; font-size: 0.85rem; margin-top: 0.2rem; }
-      /* Chapter header band — replaces the thin <hr> divider with a more
-         decisive break that also encodes the narrative-arc stage and a
-         chapter number for the navigation pills to point at. */
+      /* Chapter header band — a quiet horizontal rule under the chapter
+         title so each section gets a decisive visual break. */
       .chapter-band {
         margin: 2.75rem 0 0.75rem 0; padding-bottom: 0.55rem;
         border-bottom: 1px solid #d1d5db;
-      }
-      .chapter-band .chapter-meta {
-        display: flex; align-items: center; gap: 0.6rem;
-        margin-bottom: 0.35rem;
-      }
-      .chapter-band .arc-pill {
-        display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px;
-        font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em;
-        text-transform: uppercase; color: #ffffff;
-      }
-      .chapter-band .arc-what       { background: #2563eb; }
-      .chapter-band .arc-so-what    { background: #7c3aed; }
-      .chapter-band .arc-what-next  { background: #059669; }
-      .chapter-band .chapter-num {
-        font-family: Georgia, serif; color: #6b7280; font-size: 0.85rem;
-        font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
       }
       .chapter-band .chapter-title {
         display: block; margin: 0;
@@ -378,22 +373,13 @@ def tldr_card(num: str, headline: str, body: str, stripe: str) -> str:
     )
 
 
-# Narrative-arc pill colours — chapter_header looks these up by stage label.
-ARC_CLASSES = {
-    "What": "arc-what",
-    "So What": "arc-so-what",
-    "What Next": "arc-what-next",
-}
-
-
-def chapter_header(num: int, arc: str, anchor: str, title: str, lede: str) -> None:
+def chapter_header(anchor: str, title: str, lede: str) -> None:
     """Render a consistent chapter band: anchor target for the sticky nav,
     the title, and the opening paragraph.
 
     The invisible <a> sits 90px above the visible heading so anchor jumps
     don't bury the title under the sticky nav bar.
     """
-    arc_class = ARC_CLASSES.get(arc, "arc-what")
     st.markdown(
         f'<a class="chapter-anchor" id="{anchor}"></a>'
         f'<div class="chapter-band">'
@@ -435,6 +421,9 @@ def section_hero(df: pd.DataFrame) -> None:
     n_negative = int((nat["real_wage_growth"] < 0).sum())
     n_total = len(nat)
     cum_real = nat["real_wage_growth"].sum()
+    period_start = nat["quarter"].iloc[0]
+    period_end = nat["quarter"].iloc[-1]
+    n_states = df["state_code"].nunique()
 
     left, right = st.columns([1.15, 1], gap="large")
     with left:
@@ -450,10 +439,12 @@ def section_hero(df: pd.DataFrame) -> None:
             "and actual purchasing power — the distinction between wages "
             "as measured on paper and wages in practical, real-world terms."
             "</p>"
-            '<div class="persona-badge">'
-            '<span class="persona-label">Prepared for</span>'
-            "Treasury Policy Analyst"
-            "</div>",
+            '<dl class="report-meta">'
+            f"<dt>Period covered</dt><dd>{period_start} — {period_end}</dd>"
+            f"<dt>Coverage</dt><dd>{n_states} states &amp; territories</dd>"
+            "<dt>Approach</dt><dd>Time-series analysis, jurisdiction comparison, "
+            "and forward scenario projection</dd>"
+            "</dl>",
             unsafe_allow_html=True,
         )
     with right:
@@ -554,8 +545,6 @@ def section_what_national(df: pd.DataFrame, selected_quarter: str) -> None:
     sel_row = nat[nat["quarter"] == selected_quarter].iloc[0]
 
     chapter_header(
-        num=1,
-        arc="What",
         anchor="ch1",
         title="1. Assessing Real Wage Performance: The National Timeline",
         lede=(
@@ -680,8 +669,6 @@ def section_what_state(df: pd.DataFrame, selected_quarter: str) -> None:
     snapshot = snapshot.set_index("state_code").loc[STATE_ORDER].reset_index()
 
     chapter_header(
-        num=2,
-        arc="What",
         anchor="ch2",
         title="2. State and Territory Wage Index Outcomes",
         lede=(
@@ -814,8 +801,6 @@ def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
     nat = national_series(df)
 
     chapter_header(
-        num=3,
-        arc="So What",
         anchor="ch3",
         title="3. Cost Drivers: Components of Inflationary Pressure",
         lede=(
@@ -994,8 +979,6 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
     cum_so_far = nat["real_wage_growth"].sum()
 
     chapter_header(
-        num=4,
-        arc="What Next",
         anchor="ch4",
         title="4. Forecast Scenarios: Projecting Real Wage Outcomes",
         lede=(
@@ -1167,8 +1150,6 @@ def section_call_to_action(df: pd.DataFrame) -> None:
     housing_gap = abs(cum_housing - cum_all)
 
     chapter_header(
-        num=5,
-        arc="What Next",
         anchor="ch5",
         title="5. Policy Recommendations",
         lede=(
