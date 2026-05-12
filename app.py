@@ -395,7 +395,7 @@ def chapter_header(num: int, arc: str, anchor: str, title: str, lede: str) -> No
         f'<div class="chapter-meta">'
         f'<span class="arc-pill {arc_class}">{arc}</span>'
         f'<span class="chapter-num">Chapter {num}</span>'
-        f'</div>'
+        f"</div>"
         f'<h2 class="chapter-title">{title}</h2>'
         f"</div>",
         unsafe_allow_html=True,
@@ -820,7 +820,7 @@ def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
         anchor="ch3",
         title="Where the Money Actually Went",
         lede=(
-            "When the news says \u201Cinflation was 0.6% this quarter,\u201D "
+            "When the news says \u201cinflation was 0.6% this quarter,\u201d "
             "that\u2019s an average across hundreds of things. Some barely "
             "moved. Others spiked. For anyone paying rent, buying "
             "groceries, or commuting to work, the headline average "
@@ -841,15 +841,21 @@ def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
     toggle_cols = st.columns(3)
     with toggle_cols[0]:
         show_housing = st.checkbox(
-            "\U0001f3e0 Housing", value=False, key="toggle_housing",
+            "\U0001f3e0 Housing",
+            value=False,
+            key="toggle_housing",
         )
     with toggle_cols[1]:
         show_food = st.checkbox(
-            "\U0001f6d2 Food", value=False, key="toggle_food",
+            "\U0001f6d2 Food",
+            value=False,
+            key="toggle_food",
         )
     with toggle_cols[2]:
         show_transport = st.checkbox(
-            "\U0001f697 Transport", value=False, key="toggle_transport",
+            "\U0001f697 Transport",
+            value=False,
+            key="toggle_transport",
         )
 
     # --- Build chart ---
@@ -929,28 +935,44 @@ def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
     sel_row = nat[nat["quarter"] == selected_quarter].iloc[0]
     k1, k2, k3, k4 = st.columns(4)
     with k1:
-        st.markdown(kpi_card(
-            "Selected quarter", selected_quarter,
-            "Adjust using the sidebar slider.",
-        ), unsafe_allow_html=True)
+        st.markdown(
+            kpi_card(
+                "Selected quarter",
+                selected_quarter,
+                "Adjust using the sidebar slider.",
+            ),
+            unsafe_allow_html=True,
+        )
     with k2:
         housing_vs_avg = sel_row["housing"] - sel_row["inflation_rate"]
-        st.markdown(kpi_card(
-            "🏠 Housing", f"{sel_row['housing']:+.1f}%",
-            f"{housing_vs_avg:+.1f}% vs All Groups average.",
-        ), unsafe_allow_html=True)
+        st.markdown(
+            kpi_card(
+                "🏠 Housing",
+                f"{sel_row['housing']:+.1f}%",
+                f"{housing_vs_avg:+.1f}% vs All Groups average.",
+            ),
+            unsafe_allow_html=True,
+        )
     with k3:
         food_vs_avg = sel_row["food"] - sel_row["inflation_rate"]
-        st.markdown(kpi_card(
-            "🛒 Food", f"{sel_row['food']:+.1f}%",
-            f"{food_vs_avg:+.1f}% vs All Groups average.",
-        ), unsafe_allow_html=True)
+        st.markdown(
+            kpi_card(
+                "🛒 Food",
+                f"{sel_row['food']:+.1f}%",
+                f"{food_vs_avg:+.1f}% vs All Groups average.",
+            ),
+            unsafe_allow_html=True,
+        )
     with k4:
         transport_vs_avg = sel_row["transport"] - sel_row["inflation_rate"]
-        st.markdown(kpi_card(
-            "🚗 Transport", f"{sel_row['transport']:+.1f}%",
-            f"{transport_vs_avg:+.1f}% vs All Groups average.",
-        ), unsafe_allow_html=True)
+        st.markdown(
+            kpi_card(
+                "🚗 Transport",
+                f"{sel_row['transport']:+.1f}%",
+                f"{transport_vs_avg:+.1f}% vs All Groups average.",
+            ),
+            unsafe_allow_html=True,
+        )
 
     # --- Cumulative summary ---
     cum_food = nat["food"].sum()
@@ -982,6 +1004,7 @@ def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
         f"</div>",
         unsafe_allow_html=True,
     )
+
 
 def section_what_next_whatif(df: pd.DataFrame) -> None:
     """What Next — a what-if projector. Reader sets a hypothetical
@@ -1272,15 +1295,6 @@ def main() -> None:
                 "- Joining: WPI per state + national CPI broadcast across "
                 "states in long format. See README for full data dictionary."
             )
-
-        st.markdown("---")
-        st.markdown(
-            '<p style="color:#6b7280;font-size:0.85rem;">'
-            "Built for UTS Data Visualisation Asm3.<br>"
-            "<strong>Narrative arc:</strong> What → So What → What Next."
-            "</p>",
-            unsafe_allow_html=True,
-        )
 
     chapter_nav()
     section_hero(df)
