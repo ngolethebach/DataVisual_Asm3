@@ -37,6 +37,8 @@ import streamlit as st
 
 DATA_PATH = Path(__file__).parent / "data" / "wage_inflation.csv"
 
+BANNER_PATH = Path(__file__).parent / "assets" / "banner.png"
+
 # Editorial palette — wage = steel blue (calm/trust), inflation = alarm red,
 # real-wage delta = green when positive / red when negative, amber for the
 # selected-quarter highlight. Contrast pairs all hit WCAG AA on #fafaf7.
@@ -63,7 +65,7 @@ STATE_ORDER = ["NSW", "VIC", "QLD", "SA", "WA", "TAS", "NT", "ACT"]
 # ---------------------------------------------------------------------------
 
 st.set_page_config(
-    page_title="Real Wages, Real Lives",
+    page_title="Real Wage Growth and Cost of Living Analysis",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -382,8 +384,8 @@ ARC_CLASSES = {
 
 
 def chapter_header(num: int, arc: str, anchor: str, title: str, lede: str) -> None:
-    """Render a consistent chapter band: arc pill, chapter number, anchor
-    target for the sticky nav, the title, and the opening paragraph.
+    """Render a consistent chapter band: anchor target for the sticky nav,
+    the title, and the opening paragraph.
 
     The invisible <a> sits 90px above the visible heading so anchor jumps
     don't bury the title under the sticky nav bar.
@@ -392,10 +394,6 @@ def chapter_header(num: int, arc: str, anchor: str, title: str, lede: str) -> No
     st.markdown(
         f'<a class="chapter-anchor" id="{anchor}"></a>'
         f'<div class="chapter-band">'
-        f'<div class="chapter-meta">'
-        f'<span class="arc-pill {arc_class}">{arc}</span>'
-        f'<span class="chapter-num">Chapter {num}</span>'
-        f"</div>"
         f'<h2 class="chapter-title">{title}</h2>'
         f"</div>",
         unsafe_allow_html=True,
@@ -407,15 +405,15 @@ def chapter_nav() -> None:
     """Sticky pill nav linking to each chapter anchor. Browsers handle
     the scroll natively — no JS required, no Streamlit reruns."""
     items = [
-        ("ch1", "1 · The gap"),
-        ("ch2", "2 · State by state"),
-        ("ch3", "3 · What\u2019s getting expensive"),
-        ("ch4", "4 · What if"),
-        ("ch5", "5 · What should change?"),
+        ("ch1", "1 · Real Wage Performance"),
+        ("ch2", "2 · State & Territory Outcomes"),
+        ("ch3", "3 · Cost Drivers"),
+        ("ch4", "4 · Forecast Scenarios"),
+        ("ch5", "5 · Policy Recommendations"),
     ]
     pills = "".join(f'<a href="#{anchor}">{label}</a>' for anchor, label in items)
     st.markdown(
-        f'<div class="chapter-nav"><span class="nav-label">Jump to</span>{pills}</div>',
+        f'<div class="chapter-nav"><span class="nav-label">Contents</span>{pills}</div>',
         unsafe_allow_html=True,
     )
 
@@ -437,41 +435,32 @@ def section_hero(df: pd.DataFrame) -> None:
 
     left, right = st.columns([1.15, 1], gap="large")
     with left:
-        st.markdown(
-            '<div class="hero-kicker">A Data Narrative · UTS Asm3</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown("# Real Wages, Real Lives")
+        st.markdown("# Real Wage Growth and Cost of Living Analysis")
         st.markdown(
             '<p class="narrative">'
-            "Between late 2023 and the end of 2025, wages were growing. "
-            "The number on the payslip was getting bigger. But prices "
-            "were rising faster — and over nine quarters, the gap "
-            "between what Australians earned and what they could "
-            "actually buy with it adds up to just "
-            f"<strong>{cum_real:+.1f}%</strong> in real terms. That’s "
-            "the difference between the wage on paper and the wage in "
-            "practice."
-            "</p>"
-            '<div class="persona-badge">'
-            '<span class="persona-label">Prepared for</span>'
-            "Treasury Policy Analyst"
-            "</div>",
+            "Between late 2023 and the end of 2025, nominal wages continued "
+            "to increase, reflecting ongoing growth in headline earnings."
+            " However, this growth was outpaced by rising prices."
+            " Over nine consecutive quarters, the divergence between wage growth "
+            "and inflation resulted in only a +1.1% increase in real wages. "
+            "This highlights a persistent gap between reported income growth "
+            "and actual purchasing power — the distinction between wages "
+            "as measured on paper and wages in practical, real-world terms."
+            "</p>",
             unsafe_allow_html=True,
         )
     with right:
         st.markdown(
             '<div class="hero-stat-card">'
-            '<div class="hero-stat-kicker">The headline finding</div>'
+            '<div class="hero-stat-kicker">Real Wage Contraction Across the Period</div>'
             f'<div class="hero-stat">{n_negative} <span class="hero-stat-of">of</span> {n_total}</div>'
             '<p class="hero-stat-body">'
-            "quarters where wage growth didn’t keep up with "
-            "inflation. In those quarters, every dollar earned bought "
-            "less than the quarter before. This matters for policy "
-            "because government payments like rent assistance and "
-            "pensions are adjusted based on these numbers — and if "
-            "the adjustment formula doesn’t reflect reality, the "
-            "payments fall behind too."
+            "quarters recorded real wage contraction, with wage growth failing to keep pace with inflation. "
+            "During these periods, nominal income growth did not translate into improved purchasing power. "
+            "This has direct policy implications. Indexation mechanisms for government payments, including "
+            "rent assistance and income support, are primarily linked to headline measures. Where these "
+            "measures understate cost pressures, particularly in essential categories, real payment values "
+            "may erode over time."
             "</p>"
             '<div class="hero-stat-foot">'
             "Cumulative real wage growth across the period: "
@@ -503,7 +492,7 @@ def section_tldr(df: pd.DataFrame) -> None:
     state_spread = leader_state_q["wage_index"] - laggard_state_q["wage_index"]
 
     st.markdown(
-        '<p class="hero-kicker" style="margin-top:2rem;">The 30-second version</p>',
+        '<p class="hero-kicker" style="margin-top:2rem;">Executive Summary</p>',
         unsafe_allow_html=True,
     )
     c1, c2, c3 = st.columns(3, gap="medium")
@@ -511,10 +500,12 @@ def section_tldr(df: pd.DataFrame) -> None:
         st.markdown(
             tldr_card(
                 "The Gap",
-                "Wages grew. Real wages barely moved.",
-                f"Over nine quarters, real wage growth totalled just "
-                f"<strong>{cum_real:+.1f}%</strong>. Inflation clawed back "
-                "almost everything that wage growth delivered.",
+                "Inflation constrained growth in real wage.",
+                f"Over the nine-quarter period, real wage growth totalled "
+                f"<strong>{cum_real:+.1f}%</strong>. Elevated inflation "
+                "substantially offset nominal wage gains, limiting improvements"
+                " in household purchasing power. Thus overall improvement in "
+                "real wages is yet again minimal.",
                 stripe=PALETTE["wage"],
             ),
             unsafe_allow_html=True,
@@ -523,11 +514,11 @@ def section_tldr(df: pd.DataFrame) -> None:
         st.markdown(
             tldr_card(
                 "The Driver",
-                "Housing costs did most of the damage.",
-                f"Housing prices rose <strong>{cum_housing:+.1f}%</strong> "
-                "over the period — well above the overall average. "
-                "Government payments adjusted to the average rate have "
-                "fallen behind the cost that matters most.",
+                "Housing costs were a primary source of inflationary pressure.",
+                f"Housing prices increased by <strong>{cum_housing:+.1f}%</strong> "
+                "over the period, significantly exceeding the overall average. "
+                "Government payments indexed to broader inflation measures "
+                "did not fully keep pace with housing-related cost increases.",
                 stripe=PALETTE["housing"],
             ),
             unsafe_allow_html=True,
@@ -536,12 +527,13 @@ def section_tldr(df: pd.DataFrame) -> None:
         st.markdown(
             tldr_card(
                 "The Uneven Recovery",
-                "Not every state is in the same position.",
-                f"In {last_q['quarter']}, there’s a "
-                f"<strong>{state_spread:.1f}-point</strong> gap between "
+                "Wage outcomes varied across states and territories",
+                f"In {last_q['quarter']}, there was a "
+                f"<strong>{state_spread:.1f}-point</strong> difference between "
                 f"{leader_state_q['state_name']} and "
                 f"{laggard_state_q['state_name']} on the wage index. "
-                "A one-size-fits-all national policy can’t address that.",
+                "This highlights differing labour market conditions across jurisdictions "
+                "and the limitations of uniform national policy settings.",
                 stripe=PALETTE["positive"],
             ),
             unsafe_allow_html=True,
@@ -558,14 +550,14 @@ def section_what_national(df: pd.DataFrame, selected_quarter: str) -> None:
         num=1,
         arc="What",
         anchor="ch1",
-        title="The Headline Number Lies",
+        title="1. Assessing Real Wage Performance: The National Timeline",
         lede=(
-            "Every quarter, the ABS releases two key numbers: how fast "
-            "wages are growing, and how fast prices are rising. Most "
-            "reporting covers them separately. The real story only "
-            "appears when you put them on the same chart \u2014 because "
-            "it\u2019s the gap between the two that determines whether "
-            "workers are getting ahead or falling behind."
+            "The Australian Bureau of Statistics (ABS) releases quarterly "
+            "data on both wage growth and consumer price inflation. "
+            "Together, these measures provide an indication of changes in "
+            "real wages and household purchasing power. Where inflation "
+            "exceeds wage growth, the purchasing power of households "
+            "declines despite increases in nominal earnings."
         ),
     )
 
@@ -684,15 +676,15 @@ def section_what_state(df: pd.DataFrame, selected_quarter: str) -> None:
         num=2,
         arc="What",
         anchor="ch2",
-        title="Eight Australias, Eight Pay Stories",
+        title="2. State and Territory Wage Index Outcomes",
         lede=(
-            "National averages flatten everything. Tasmania pays "
-            "differently from the ACT; Queensland tracks differently "
-            "from Western Australia. The Wage Price Index "
-            "by state shows where each jurisdiction has landed \u2014 and "
-            "the spread between the highest and lowest matters, because "
-            "national policy settings (minimum wage, pension rates, "
-            "rent assistance) apply the same rate everywhere."
+            "Wage Price Index outcomes vary across states and territories, "
+            "reflecting differences in labour market conditions, industry composition "
+            "and regional economic performance. While national averages provide a useful "
+            "headline measure, jurisdiction-level results show the extent of variation "
+            "across the federation. This variation is relevant for policy design, as "
+            "nationally uniform settings may have different real-world effects across "
+            "states and territories."
         ),
     )
 
@@ -709,9 +701,9 @@ def section_what_state(df: pd.DataFrame, selected_quarter: str) -> None:
             size="wage_index",
             color="wage_index",
             color_continuous_scale=[
-                [0.0, "#fde68a"],
-                [0.5, "#f59e0b"],
-                [1.0, "#9a3412"],
+                [0.0, "#dbeafe"],
+                [0.5, "#3b82f6"],
+                [1.0, "#1e3a8a"],
             ],
             size_max=42,
             hover_name="state_name",
@@ -773,7 +765,7 @@ def section_what_state(df: pd.DataFrame, selected_quarter: str) -> None:
                 orientation="h",
                 marker=dict(
                     color=sorted_snap["wage_index"],
-                    colorscale=[[0.0, "#fde68a"], [1.0, "#9a3412"]],
+                    colorscale=[[0.0, "#dbeafe"], [0.5, "#60a5fa"], [1.0, "#1e3a8a"]],
                     showscale=False,
                 ),
                 customdata=sorted_snap[["state_name", "wage_growth"]].values,
@@ -818,15 +810,15 @@ def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
         num=3,
         arc="So What",
         anchor="ch3",
-        title="Where the Money Actually Went",
+        title="3. Cost Drivers: Components of Inflationary Pressure",
         lede=(
-            "When the news says \u201cinflation was 0.6% this quarter,\u201d "
-            "that\u2019s an average across hundreds of things. Some barely "
-            "moved. Others spiked. For anyone paying rent, buying "
-            "groceries, or commuting to work, the headline average "
-            "understates what they\u2019re actually experiencing. Use the "
-            "toggles below to see how each category compares to the "
-            "overall average."
+            "Quarterly inflation outcomes reflect aggregate price movements across "
+            "multiple expenditure categories. While some categories recorded "
+            "relatively modest increases, others experienced substantially stronger "
+            "price growth. For many households, particularly those facing rising "
+            "housing and living costs, the headline inflation rate may not fully "
+            "reflect experienced cost pressures. The charts below compare selected "
+            "CPI categories with the overall inflation average."
         ),
     )
 
@@ -841,21 +833,15 @@ def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
     toggle_cols = st.columns(3)
     with toggle_cols[0]:
         show_housing = st.checkbox(
-            "\U0001f3e0 Housing",
-            value=False,
-            key="toggle_housing",
+            "\U0001f3e0 Housing", value=False, key="toggle_housing",
         )
     with toggle_cols[1]:
         show_food = st.checkbox(
-            "\U0001f6d2 Food",
-            value=False,
-            key="toggle_food",
+            "\U0001f6d2 Food", value=False, key="toggle_food",
         )
     with toggle_cols[2]:
         show_transport = st.checkbox(
-            "\U0001f697 Transport",
-            value=False,
-            key="toggle_transport",
+            "\U0001f697 Transport", value=False, key="toggle_transport",
         )
 
     # --- Build chart ---
@@ -935,44 +921,28 @@ def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
     sel_row = nat[nat["quarter"] == selected_quarter].iloc[0]
     k1, k2, k3, k4 = st.columns(4)
     with k1:
-        st.markdown(
-            kpi_card(
-                "Selected quarter",
-                selected_quarter,
-                "Adjust using the sidebar slider.",
-            ),
-            unsafe_allow_html=True,
-        )
+        st.markdown(kpi_card(
+            "Selected quarter", selected_quarter,
+            "Adjust using the sidebar slider.",
+        ), unsafe_allow_html=True)
     with k2:
         housing_vs_avg = sel_row["housing"] - sel_row["inflation_rate"]
-        st.markdown(
-            kpi_card(
-                "🏠 Housing",
-                f"{sel_row['housing']:+.1f}%",
-                f"{housing_vs_avg:+.1f}% vs All Groups average.",
-            ),
-            unsafe_allow_html=True,
-        )
+        st.markdown(kpi_card(
+            "🏠 Housing", f"{sel_row['housing']:+.1f}%",
+            f"{housing_vs_avg:+.1f}% vs All Groups average.",
+        ), unsafe_allow_html=True)
     with k3:
         food_vs_avg = sel_row["food"] - sel_row["inflation_rate"]
-        st.markdown(
-            kpi_card(
-                "🛒 Food",
-                f"{sel_row['food']:+.1f}%",
-                f"{food_vs_avg:+.1f}% vs All Groups average.",
-            ),
-            unsafe_allow_html=True,
-        )
+        st.markdown(kpi_card(
+            "🛒 Food", f"{sel_row['food']:+.1f}%",
+            f"{food_vs_avg:+.1f}% vs All Groups average.",
+        ), unsafe_allow_html=True)
     with k4:
         transport_vs_avg = sel_row["transport"] - sel_row["inflation_rate"]
-        st.markdown(
-            kpi_card(
-                "🚗 Transport",
-                f"{sel_row['transport']:+.1f}%",
-                f"{transport_vs_avg:+.1f}% vs All Groups average.",
-            ),
-            unsafe_allow_html=True,
-        )
+        st.markdown(kpi_card(
+            "🚗 Transport", f"{sel_row['transport']:+.1f}%",
+            f"{transport_vs_avg:+.1f}% vs All Groups average.",
+        ), unsafe_allow_html=True)
 
     # --- Cumulative summary ---
     cum_food = nat["food"].sum()
@@ -986,7 +956,7 @@ def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
         f'border-radius:8px; padding:1.5rem 1.5rem; margin:1.5rem 0;">'
         f'<p style="font-family:Georgia,serif; font-size:1.35rem; '
         f'font-weight:700; color:#1f2937; margin:0 0 0.75rem 0; line-height:1.3;">'
-        f"Australians got a pay rise. Inflation took it back."
+        f"Real wage gains were offset by rising living costs."
         f"</p>"
         f'<p style="font-size:1rem; line-height:1.7; color:#374151; margin:0;">'
         f"Over 9 quarters — Housing surged <strong>{cum_housing:+.1f}%</strong> · "
@@ -1005,7 +975,6 @@ def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
         unsafe_allow_html=True,
     )
 
-
 def section_what_next_whatif(df: pd.DataFrame) -> None:
     """What Next — a what-if projector. Reader sets a hypothetical
     quarterly wage-growth and inflation rate; we project the cumulative
@@ -1018,12 +987,12 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
         num=4,
         arc="What Next",
         anchor="ch4",
-        title="When Do Real Wages Recover?",
+        title="4. Forecast Scenarios: Projecting Real Wage Outcomes",
         lede=(
             "Use the sliders below to set a hypothetical wage growth "
             "rate and inflation rate for the next two years. The dashed "
             "line shows where cumulative real wages would end up under "
-            "your scenario \u2014 starting from where the actual data "
+            "your scenario — starting from where the actual data "
             "leaves off."
         ),
     )
@@ -1188,12 +1157,15 @@ def section_call_to_action(df: pd.DataFrame) -> None:
         num=5,
         arc="What Next",
         anchor="ch5",
-        title="What Should Change?",
+        title="5. Policy Recommendations",
         lede=(
-            "The data across the previous four chapters points to a "
-            "clear mismatch: the way government payments are adjusted "
-            "for inflation doesn\u2019t reflect the actual cost pressures "
-            "households face \u2014 especially on housing."
+            "The analysis in this report indicates that headline wage "
+            "and inflation measures do not fully capture the cost pressures "
+            "experienced by households. While nominal wages increased over "
+            "the reporting period, real wage gains remained limited, "
+            "particularly where essential expenditure categories such as "
+            "housing rose faster than average inflation. This suggests a "
+            "need for more targeted, distributionally aware policy settings."
         ),
     )
 
@@ -1201,7 +1173,7 @@ def section_call_to_action(df: pd.DataFrame) -> None:
     with r1:
         st.markdown(
             '<div class="policy-rec">'
-            '<div class="rec-label">Recommendation 1: Fix the adjustment formula</div>'
+            '<div class="rec-label">Recommendation 1: Review indexation arrangements for income support payments</div>'
             '<div class="rec-body">'
             "Government payments like rent assistance, JobSeeker, and the "
             "Age Pension are currently adjusted based on the overall "
@@ -1218,13 +1190,12 @@ def section_call_to_action(df: pd.DataFrame) -> None:
     with r2:
         st.markdown(
             '<div class="policy-rec">'
-            '<div class="rec-label">Recommendation 2: Account for state differences</div>'
+            '<div class="rec-label">Recommendation 2: Strengthen Commonwealth Rent Assistance adequacy</div>'
             '<div class="rec-body">'
-            "The wage index varies significantly across states — as shown "
-            "in Chapter 2. But the minimum wage and payment rates are set "
-            "nationally. <br><br> Treasury should model what it would look like to "
-            "adjust payment rates by state, so that the same dollar amount "
-            "doesn't mean very different things in Tasmania versus the ACT."
+            "Given the continued pressure on renters, Treasury should assess whether the maximum rate and eligibility "
+            "thresholds for Commonwealth Rent Assistance remain adequate. The Economic Inclusion Advisory "
+            "Committee has repeatedly recommended stronger support for low-income households, including increased "
+            "assistance for people relying on income support."
             "</div>"
             "</div>",
             unsafe_allow_html=True,
@@ -1232,14 +1203,11 @@ def section_call_to_action(df: pd.DataFrame) -> None:
     with r3:
         st.markdown(
             '<div class="policy-rec">'
-            '<div class="rec-label">Recommendation 3: Track the gap, not just the number</div>'
+            '<div class="rec-label">Recommendation 3: Incorporate jurisdiction-level analysis into policy modelling</div>'
             '<div class="rec-body">'
-            "Currently, the Cost-of-Living desk tracks wage growth and "
-            "inflation separately. The gap between them — real wage growth "
-            "— should be a standing metric in every quarterly report. <br><br> The "
-            "scenario tool in Chapter 4 shows how this could work in "
-            "practice: set a recovery target, model different paths, "
-            "and track whether policy is closing the gap or widening it."
+            "Treasury should model how wage, inflation and housing pressures differ across states and territories. "
+            "National payment settings may have different real-world effects across jurisdictions, particularly "
+            "where wage growth and housing costs diverge."
             "</div>"
             "</div>",
             unsafe_allow_html=True,
@@ -1253,6 +1221,10 @@ def section_call_to_action(df: pd.DataFrame) -> None:
 
 def main() -> None:
     df = load_data()
+
+    # --- Top banner ---
+    st.image(str(BANNER_PATH))
+
     nat = national_series(df)
     quarters = nat["quarter"].tolist()
 
