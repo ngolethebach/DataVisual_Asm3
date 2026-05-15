@@ -4,7 +4,7 @@
 >
 > *"Between late 2023 and the end of 2025, the headline number said wages were growing. The lived reality said otherwise."*
 
-[![Streamlit App](https://img.shields.io/badge/Live%20App-Streamlit%20Cloud-FF4B4B?logo=streamlit&logoColor=white)](https://share.streamlit.io/)
+[![Streamlit App](https://img.shields.io/badge/Live%20App-Streamlit%20Cloud-FF4B4B?logo=streamlit&logoColor=white)](https://group10datavisualisation.streamlit.app/)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![ABS Data](https://img.shields.io/badge/Data-Australian%20Bureau%20of%20Statistics-003087)](https://www.abs.gov.au/)
 
