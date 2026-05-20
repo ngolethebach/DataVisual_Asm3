@@ -234,6 +234,12 @@ All four brief-required advanced features are implemented. The **video walkthrou
 
 ## 6. Visual & Design Principles
 
+### Brand & Visual Identity
+
+The dashboard adopts the **NSW Government masterbrand** and visual identity system — used for the header banner, logo, and overall colour/typography treatment — to align the presentation with the intended audience of NSW Treasury and to reflect established government communication standards. The use of official branding, colour palettes and accessible design principles supports consistency, credibility and recognisability, in line with NSW Government branding and digital design guidelines.
+
+Visual identity assets and guidance obtained from: <https://www.nsw.gov.au/branding>.
+
 ### Gestalt Principles Applied
 
 | Principle | Implementation |
