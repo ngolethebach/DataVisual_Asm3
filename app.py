@@ -21,6 +21,14 @@ Advanced features implemented (project brief requires >=3 of 4):
 
 Data: data/wage_inflation.csv (see README.md for the data dictionary).
 Run with:  streamlit run app.py
+
+Visual identity:
+  Design decisions (typography hierarchy, restrained colour use, WCAG AA
+  contrast, calm public-sector tone) draw on the NSW Government Brand &
+  Visual Identity guide:
+      https://www.nsw.gov.au/nsw-government-brand
+  See the PALETTE block and the global CSS section for where these
+  principles are applied.
 """
 
 from pathlib import Path
@@ -42,6 +50,14 @@ BANNER_PATH = Path(__file__).parent / "assets" / "banner.png"
 # Editorial palette — wage = steel blue (calm/trust), inflation = alarm red,
 # real-wage delta = green when positive / red when negative, amber for the
 # selected-quarter highlight. Contrast pairs all hit WCAG AA on #fafaf7.
+#
+# Visual identity reference: tone, restraint, and accessibility decisions
+# below are informed by the NSW Government Brand & Visual Identity guide
+# (https://www.nsw.gov.au/nsw-government-brand) — specifically its guidance
+# on accessible colour contrast, hierarchy, and a calm, trustworthy public-
+# sector voice. Our hues differ (editorial story vs. NSW Govt master brand)
+# but the contrast/legibility principles and the "clear, human, considered"
+# tone are applied throughout.
 PALETTE = {
     "ink": "#1f2937",
     "paper": "#fafaf7",
@@ -74,6 +90,13 @@ st.set_page_config(
 # feel: narrower max-width for prose blocks, larger hero type, calmer
 # section spacing. Streamlit's default container is full-bleed, which
 # reads as dashboard-y; we want the page to feel like a long-read.
+#
+# Type hierarchy and spacing follow the NSW Government Brand & Visual
+# Identity guide (https://www.nsw.gov.au/nsw-government-brand): generous
+# whitespace, a single clear focal point per section, sentence-case
+# headings, and a serif heading face paired with the system sans for
+# body — chosen to read as considered, public-sector communication
+# rather than dashboard chrome.
 st.markdown(
     """
     <style>

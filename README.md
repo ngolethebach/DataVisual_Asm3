@@ -17,7 +17,7 @@ This repository is our **Group Final Portfolio** for UTS 36104 — *not a writte
 | Deliverable | Where to find it |
 |---|---|
 | **Live dashboard** | Streamlit Cloud — link at top of repo |
-| **Video walkthrough (3 min)** | `files/` directory · narrated tour of the **three advanced features**, framed so the tutor can score on **technical prowess, accuracy, and relevance** |
+| **Video walkthrough (3 min)** | Submitted as a separate attachment (`Video_Walkthrough.mp4`) · narrated tour of the **three advanced features**, framed so the tutor can score on **technical prowess, accuracy, and relevance** |
 | **Technical documentation** | This README (sections 1–8) + Data Dictionary in §4 |
 | **Slide deck (Persuasion Pitch)** | `docs/` directory · pitched live in class 13-May-2026 |
 | **EDA notebook** | `eda/` and `wage_inflation_rebuild.ipynb` |
@@ -126,7 +126,6 @@ DataVisual_Asm3/
 │
 ├── eda/                      # EDA outputs & exploratory notebooks
 ├── docs/                     # Slide deck + supporting strategy artefacts
-├── files/                    # Video walkthrough + delivery assets
 ├── assets/                   # Static images / icons used by the app
 │
 ├── .streamlit/
@@ -189,7 +188,7 @@ The key insight driving the dataset design: **WPI is published per state, but CP
 
 ## 5. Advanced Features (≥ 3 Required)
 
-All four brief-required advanced features are implemented. The **video walkthrough in `files/`** tours each one in turn — narrated to direct the tutor's scoring across the three official rubric dimensions: **technical prowess**, **accuracy**, and **relevance** to the narrative.
+All four brief-required advanced features are implemented. The **video walkthrough (`Video_Walkthrough.mp4`, submitted as a separate attachment)** tours each one in turn — narrated to direct the tutor's scoring across the three official rubric dimensions: **technical prowess**, **accuracy**, and **relevance** to the narrative.
 
 ### ✅ 1. Context-Aware Filtering
 **Where:** Sidebar `st.select_slider` ("Spotlight quarter") → drives Chapter 1 national timeline (vertical highlight band), Chapter 2 geo-bubble map, Chapter 2 ranked bar chart, and Chapter 2 pull-quote simultaneously.
