@@ -48,9 +48,9 @@ This project transforms four raw ABS spreadsheets into a single persuasive scrol
 | **Narrative arc** | **What → So What → What Next** (executive efficiency arc) |
 | **Stakeholder hat** | Australian federal Treasury / cost-of-living policy desk |
 | **Tool** | Streamlit (Python) |
-| **Dimensions** | Temporal (`quarter_date`) + Spatial (`state_code`, `latitude`, `longitude`) |
-| **Visuals** | 5 interactive Plotly charts + dynamic KPI tiles |
-| **Dataset grain** | One row per quarter × state (72 rows) |
+| **Dimensions** | Temporal (`quarter_date`) + Spatial — state (`state_code`, `latitude`, `longitude`) and LGA (`LGA_CODE11`) |
+| **Visuals** | 6 interactive Plotly charts + dynamic KPI tiles (the 6th is the LGA SEIFA choropleth added after Asm3 marker feedback) |
+| **Dataset grain** | Quarterly: one row per quarter × state (72 rows). Sub-state: one row per LGA (565 LGAs, ABS 2011) for the structural-disadvantage layer. |
 
 ### SILOs Addressed
 
@@ -73,10 +73,10 @@ We chose the **executive efficiency arc** because our primary stakeholder (Treas
 |---|---|---|---|
 | Hero + TL;DR | All three | *Real Wages, Real Lives* | Single striking stat + 30-second card summary |
 | 1 | **What** | The Headline Number Lies | Wage growth ≠ real wage growth; the gap has a shape |
-| 2 | **What** | Eight Australias, Eight Pay Stories | Spatial WPI divergence — national averages mask state stories |
+| 2 | **What** | Eight Australias, Eight Pay Stories — *plus the LGA picture* | Spatial WPI divergence at state level; sub-state LGA disadvantage map (SEIFA IRSD) added in response to marker feedback so the cost-of-living pressure layer is visible at the resolution decisions actually land on |
 | 3 | **So What** | Where the Money Actually Went | Housing CPI is the dominant driver of lived-cost pain |
 | 4 | **What Next** | When Do Real Wages Recover? | Parametric projection — reader sets the recovery conditions |
-| 5 | **What Next** | So What Should Anyone Do About It? | Three stakeholder lenses: policymaker, journalist, household |
+| 5 | **What Next** | Findings and Next Steps for Treasury | Five dataset-anchored briefing points, each pairing a number from Chapters 1–4 with an analyst-framed suggested next step |
 
 ### User Persona
 
@@ -118,11 +118,13 @@ DataVisual_Asm3/
 │       └── section_call_to_action()  ← Chapter 5 · CTA
 │
 ├── data/
-│   ├── wage_inflation.csv    # Final enriched dataset (72 rows × 15 cols) — ready to use
-│   ├── 634501.xlsx           # ABS WPI Table 1 — national, sector breakdown
-│   ├── 634502b.xlsx          # ABS WPI Table 2b — by state, all sectors
-│   ├── 6401017.xlsx          # ABS CPI Table 17 — by capital city (reference)
-│   └── 6401018.xlsx          # ABS CPI Table 18 — by sub-group, 8-city average
+│   ├── wage_inflation.csv          # Final enriched dataset (72 rows × 15 cols) — ready to use
+│   ├── lga_boundaries_2011.json    # ABS 2011 LGA GeoJSON — 565 features, drives Ch2 LGA choropleth
+│   ├── lga_seifa_2011.json         # ABS 2011 SEIFA IRSD scores by LGA — matched 1:1 to boundary file
+│   ├── 634501.xlsx                 # ABS WPI Table 1 — national, sector breakdown
+│   ├── 634502b.xlsx                # ABS WPI Table 2b — by state, all sectors
+│   ├── 6401017.xlsx                # ABS CPI Table 17 — by capital city (reference)
+│   └── 6401018.xlsx                # ABS CPI Table 18 — by sub-group, 8-city average
 │
 ├── eda/                      # EDA outputs & exploratory notebooks
 ├── docs/                     # Slide deck + supporting strategy artefacts
@@ -173,6 +175,17 @@ DataVisual_Asm3/
 
 > **Note on `wage_growth` (Original vs Seasonally Adjusted):** The Original ABS series is used because it matches the headline numbers in ABS media releases and is easier to explain to a general audience. Seasonal noise — a Q3 spike due to annual award-rate decisions — is real and expected, not a data error. If a smoother trend line is needed, swap to the Seasonally Adjusted series from `634501.xlsx`.
 
+### LGA layer — `lga_boundaries_2011.json` + `lga_seifa_2011.json`
+
+A second, sub-state dataset drives the LGA choropleth in Chapter 2. The two files are a **matched pair** — both originate from ABS Census 2011, both key on `LGA_CODE11` / `lga_id`, and they merge 1:1 with 564 of 565 LGAs aligning (one geo-only "no usual address" placeholder is intentionally unmatched).
+
+| File | Records | What it contains |
+|---|---|---|
+| `lga_boundaries_2011.json` | 565 GeoJSON features | Polygon geometry per LGA + properties `STATE_CODE`, `LGA_CODE11`, `LGA_NAME11`. ABS 2011 ASGS boundaries. |
+| `lga_seifa_2011.json` | 565 records | SEIFA **IRSD** (Index of Relative Socio-Economic Disadvantage) by LGA. Fields: `lga_id`, `lga_name`, `state`, `score`, `national_decile`, `national_percentile`, `state_decile`, `state_percentile`, `state_rank`, `national_rank`, `population`. Lower IRSD score = more disadvantaged. |
+
+**Why 2011 vintage?** The two files are a matched pair from a single Census; using a newer 2021 SEIFA against 2011 boundaries (or vice versa) would break the join because of post-2016 NSW LGA amalgamations. The IRSD is treated as a *structural* indicator — the relative disadvantage ranking of LGAs is comparatively stable across vintages, even if the absolute score moves. The chart subtitle and on-page caption call out the vintage so a careful reader can weigh that tradeoff.
+
 ### Joining Strategy — The Enrichment Layer (DI/HD)
 
 The key insight driving the dataset design: **WPI is published per state, but CPI sub-categories are only available at the national level.**
@@ -191,17 +204,17 @@ The key insight driving the dataset design: **WPI is published per state, but CP
 All four brief-required advanced features are implemented. The **video walkthrough (`Video_Walkthrough.mp4`, submitted as a separate attachment)** tours each one in turn — narrated to direct the tutor's scoring across the three official rubric dimensions: **technical prowess**, **accuracy**, and **relevance** to the narrative.
 
 ### ✅ 1. Context-Aware Filtering
-**Where:** Sidebar `st.select_slider` ("Spotlight quarter") → drives Chapter 1 national timeline (vertical highlight band), Chapter 2 geo-bubble map, Chapter 2 ranked bar chart, and Chapter 2 pull-quote simultaneously.
+**Where:** In-chapter `st.select_slider` rendered at the top of Chapter 1 ("Spotlight quarter — drives Chapters 1–3"). A scope note above the slider names every downstream chart it touches: the highlighted band on the timeline (Chapter 1), the geo-bubble map and ranked bar chart (Chapter 2), and the cost-driver pull-quote (Chapter 3). Earlier marker feedback flagged a sidebar version of this slider as confusing because the global placement implied document-wide scope; we kept the single-source-of-truth pattern but moved the control out of the sidebar and labelled its scope on the page.
 
-**How:** The `selected_quarter` variable is passed into `section_what_national()` and `section_what_state()`. Streamlit's reactive execution model reruns both sections on every slider move with zero explicit callback code.
+**How:** `section_what_national()` now renders the slider as its first widget and returns the selected quarter; `main()` threads the returned value into `section_what_state()` and `section_so_what_drivers()`. Streamlit's reactive model still reruns every downstream section on slider movement — there is no global state container or manual callback wiring.
 
 **Scoring lens (per video):**
-- *Technical prowess* — single source of truth (`selected_quarter`) propagates to 4 downstream visuals via Streamlit's reactive model, no manual callback wiring.
+- *Technical prowess* — single source of truth (`selected_quarter`) is returned from one chapter and threaded into two more; reactive propagation, no callbacks, and the explicit scope note resolves the marker's earlier confusion finding.
 - *Accuracy* — slider values are pinned to the actual `quarter_date` values in the dataset, so no off-by-one or interpolated quarters are possible.
-- *Relevance* — Alex (Treasury) flips quarters to brief the Minister on the "most recent print"; the filter mirrors how the briefing actually happens.
+- *Relevance* — Alex (Treasury) flips quarters to brief the Treasurer on the "most recent print"; the in-chapter placement mirrors how the briefing actually happens (the analyst flips the quarter on the slide they're looking at, not in a side panel).
 
 ### ✅ 2. Visual Tooltips / Hover Cards
-**Where:** Every Plotly chart (5 charts total).
+**Where:** Every Plotly chart (6 charts total — includes the LGA SEIFA choropleth added in Chapter 2).
 
 **How:** Custom `hovertemplate` strings on every trace expose multi-field hover cards: e.g. the geo-bubble map shows state name, WPI, QoQ wage growth, QoQ inflation, and real-wage delta in a single hover card. No default Plotly tooltip is used.
 
@@ -338,9 +351,9 @@ Our group operated as an **Integrated Studio** — a Code Track on GitHub and a 
 
 | # | Member | Role | OCEAN Trait | Key Contributions |
 |---|---|---|---|---|
-| 1 | **Le The Bach (Jason) Ngo** | The Developer | High Conscientiousness | Owner of the Streamlit application end-to-end — `app.py`, deployment to Streamlit Cloud, scrollytelling CSS, and the wiring of all four advanced feature implementations; established the GitHub repository and project folder structure; authored the design system v1 (palette, typography, accessibility baseline); ran design reviews with the Code Track to iterate on feasibility; final bug fixes and polish before submission. |
+| 1 | **Le The Bach (Jason) Ngo** | The Developer | High Conscientiousness | Owner of the Streamlit application end-to-end — `app.py`, deployment to Streamlit Cloud, scrollytelling CSS, and the wiring of all four advanced feature implementations; established the GitHub repository and project folder structure; authored the design system v1 (palette, typography, accessibility baseline); ran design reviews with the Code Track to iterate on feasibility; **post-marker-feedback iteration** — implemented the Chapter 2 sub-state LGA SEIFA choropleth (565 LGAs, ABS 2011 boundaries) with jurisdiction filter, view-mode toggle, population-by-decile bar, and the paired most/least-disadvantaged extremes tables; reworked Chapter 5 recommendations to be dataset-driven; final bug fixes and polish before submission. |
 | 2 | **Avanish** | The Architect — Technical Documentation Lead | High Conscientiousness | **Built the technical document** (this README) so the portfolio reads as a polished, public-facing artefact that another team could pick up with confidence; sourced and validated the 2024+ ABS dataset with temporal and spatial dimensions; built the data cleaning pipeline in Python/Pandas; engineered the `real_wage_growth` column and validated outputs; finalised the Data Dictionary and provenance tables; uploaded the enriched clean dataset to GitHub and handed off to the visual team. |
-| 3 | **Ha Anh (Hayden) Nguyen** | Quant Analyst — EDA Lead | Conscientiousness, Openness | **Built the EDA** (`eda/`, `notebook.ipynb`) that helped the team understand the dataset's shape and the story it was telling: statistical outliers, distribution checks, category drivers (which CPI sub-categories drive headline inflation), state-level wage divergence, and the relationship between wage growth and inflation; wrote the insight summaries that seed each chapter's pull-quote; validated the merged dataset; ran an accessibility audit on the draft visuals. |
+| 3 | **Ha Anh (Hayden) Nguyen** | Quant Analyst — EDA Lead | Conscientiousness, Openness | **Built the EDA** (`eda/`, `notebook.ipynb`) that helped the team understand the dataset's shape and the story it was telling: statistical outliers, distribution checks, category drivers (which CPI sub-categories drive headline inflation), state-level wage divergence, and the relationship between wage growth and inflation; wrote the insight summaries that seed each chapter's pull-quote; validated the merged dataset; ran an accessibility audit on the draft visuals; **post-marker-feedback iteration** — added the new **LGA (sub-state) feature** in Chapter 2: sourced and validated the matched-pair ABS 2011 SEIFA IRSD + LGA boundary datasets (`data/lga_seifa_2011.json`, `data/lga_boundaries_2011.json`), specified the IRSD-by-LGA narrative and the most/least-disadvantaged framing, and produced a dedicated **video walkthrough** of the LGA layer explaining how the sub-state disadvantage view complements the national WPI/CPI story. |
 
 #### Strategy Track
 

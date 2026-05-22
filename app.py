@@ -31,6 +31,7 @@ Visual identity:
   principles are applied.
 """
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -44,6 +45,14 @@ import streamlit as st
 # ---------------------------------------------------------------------------
 
 DATA_PATH = Path(__file__).parent / "data" / "wage_inflation.csv"
+
+# LGA layer — 2011 ABS LGA boundaries paired with 2011 SEIFA (Index of
+# Relative Socio-Economic Disadvantage). The pair is matched: both files
+# share the same LGA_CODE11 / lga_id keys, so they merge 1:1 with no
+# post-2016 amalgamation re-coding required. Vintage is called out in
+# the chart subtitle and README data dictionary.
+LGA_GEO_PATH   = Path(__file__).parent / "data" / "lga_boundaries_2011.json"
+LGA_SEIFA_PATH = Path(__file__).parent / "data" / "lga_seifa_2011.json"
 
 BANNER_PATH = Path(__file__).parent / "assets" / "banner.png"
 
@@ -263,6 +272,74 @@ st.markdown(
       .policy-rec .rec-body {
         font-size: 0.95rem; line-height: 1.6; color: #374151;
       }
+      /* LGA extremes tables — paired cards under the choropleth so the
+         most/least-disadvantaged LGAs are immediately legible without
+         hovering 500+ polygons. The faint coloured top border echoes
+         the choropleth scale ends (red for low score, blue for high). */
+      .lga-table-card {
+        background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;
+        padding: 1rem 1.1rem 0.4rem 1.1rem; margin: 0.6rem 0 1rem 0;
+      }
+      .lga-table-card--low  { border-top: 4px solid #dc2626; }
+      .lga-table-card--high { border-top: 4px solid #1e3a8a; }
+      .lga-table-card .lga-table-title {
+        text-transform: uppercase; letter-spacing: 0.12em;
+        color: #6b7280; font-size: 0.72rem; font-weight: 700;
+        margin-bottom: 0.55rem;
+      }
+      table.lga-table {
+        width: 100%; border-collapse: collapse;
+        font-family: Georgia, serif; font-size: 0.92rem;
+      }
+      table.lga-table th, table.lga-table td {
+        padding: 0.32rem 0.4rem; border-bottom: 1px dashed #e5e7eb;
+        color: #1f2937;
+      }
+      table.lga-table th {
+        font-size: 0.7rem; text-transform: uppercase;
+        letter-spacing: 0.08em; color: #6b7280; font-weight: 700;
+      }
+      table.lga-table tr:last-child td { border-bottom: none; }
+      /* Polish: subtle hover-lift on the KPI/LGA cards so the page feels
+         responsive without leaning on motion. Transform + shadow only —
+         no colour shift, which would compete with the choropleth scale. */
+      .kpi-card, .lga-table-card, .tldr-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .kpi-card:hover, .lga-table-card:hover, .tldr-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.07);
+      }
+      /* Entrance animation for the LGA section — a one-off fade-up so
+         the chapter's third zoom-level reveals itself rather than just
+         appearing under the state map. Runs once on page load / rerun. */
+      @keyframes lgaFadeUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .lga-section-enter {
+        animation: lgaFadeUp 0.55s ease-out both;
+      }
+      .lga-section-enter--delay-1 { animation-delay: 0.10s; }
+      .lga-section-enter--delay-2 { animation-delay: 0.20s; }
+      .lga-section-enter--delay-3 { animation-delay: 0.30s; }
+      /* Slider scope note — wraps the spotlight-quarter slider in
+         Chapter 1 so its scope is explicit on the page. The amber-bar
+         left border echoes the highlight colour used to mark the
+         selected quarter on the timeline, visually linking the two. */
+      .slider-scope-note {
+        background: #fffbeb; border: 1px solid #fde68a;
+        border-left: 4px solid #f59e0b; border-radius: 6px;
+        padding: 0.9rem 1.1rem; margin: 0.5rem 0 0.75rem 0;
+        display: flex; flex-direction: column; gap: 0.25rem;
+      }
+      .slider-scope-note .slider-scope-kicker {
+        text-transform: uppercase; letter-spacing: 0.14em;
+        color: #92400e; font-size: 0.7rem; font-weight: 700;
+      }
+      .slider-scope-note .slider-scope-body {
+        font-size: 0.92rem; line-height: 1.55; color: #374151;
+      }
     </style>
     """,
     unsafe_allow_html=True,
@@ -316,6 +393,44 @@ def national_series(df: pd.DataFrame) -> pd.DataFrame:
         .sort_values("quarter_date")
         .reset_index(drop=True)
     )
+
+
+@st.cache_data(show_spinner=False)
+def load_lga_data() -> tuple[dict, pd.DataFrame]:
+    """Load 2011 LGA boundaries and matched 2011 SEIFA scores.
+
+    Returns a tuple of (geojson dict, dataframe). The geojson features
+    expose ``LGA_CODE11`` in their properties; the dataframe carries the
+    same code as ``lga_id`` so Plotly's ``featureidkey`` lookup joins
+    cleanly. Both files originate from ABS Census 2011; we keep the
+    matched pair rather than mixing vintages (post-2016 NSW LGA
+    amalgamations would break the lookup against 2011 boundaries).
+    """
+    with open(LGA_GEO_PATH) as f:
+        geo = json.load(f)
+
+    with open(LGA_SEIFA_PATH) as f:
+        seifa_raw = json.load(f)
+
+    # The upstream SEIFA dump contains one empty record. Drop anything
+    # that's missing the join key or the score we colour on.
+    records = [
+        r for r in seifa_raw
+        if r.get("lga_id") and r.get("score")
+    ]
+    df = pd.DataFrame(records)
+    df["lga_id"] = df["lga_id"].astype(str)
+    numeric_cols = [
+        "score",
+        "national_decile",
+        "national_percentile",
+        "state_rank",
+        "state_decile",
+        "population",
+    ]
+    for col in numeric_cols:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    return geo, df
 
 
 # ---------------------------------------------------------------------------
@@ -421,7 +536,7 @@ def chapter_nav() -> None:
         ("ch2", "2 · State & Territory Outcomes"),
         ("ch3", "3 · Cost Drivers"),
         ("ch4", "4 · Forecast Scenarios"),
-        ("ch5", "5 · Policy Recommendations"),
+        ("ch5", "5 · Findings & Next Steps"),
     ]
     pills = "".join(f'<a href="#{anchor}">{label}</a>' for anchor, label in items)
     st.markdown(
@@ -561,11 +676,19 @@ def section_tldr(df: pd.DataFrame) -> None:
         )
 
 
-def section_what_national(df: pd.DataFrame, selected_quarter: str) -> None:
+def section_what_national(df: pd.DataFrame) -> str:
     """What — the national picture. Wage growth vs inflation timeline,
-    with a highlighted marker at the user-selected quarter."""
+    with a highlighted marker at the user-selected quarter.
+
+    Renders the *spotlight-quarter* control inline at the top of the
+    chapter — earlier marker feedback flagged the previous global
+    sidebar slider as confusing (it implied document-wide scope when in
+    fact it only drove Chapters 1–3). Returning the selected quarter
+    lets Chapters 2 and 3 stay in lock-step without bringing back a
+    global state container.
+    """
     nat = national_series(df)
-    sel_row = nat[nat["quarter"] == selected_quarter].iloc[0]
+    quarters = nat["quarter"].tolist()
 
     chapter_header(
         anchor="ch1",
@@ -579,6 +702,34 @@ def section_what_national(df: pd.DataFrame, selected_quarter: str) -> None:
             "declines despite increases in nominal earnings."
         ),
     )
+
+    # The story control is co-located with the chapter it lives in. The
+    # callout below the slider names every downstream chapter the slider
+    # touches, so its scope is explicit on the page rather than implied
+    # by sidebar placement.
+    st.markdown(
+        '<div class="slider-scope-note">'
+        '<span class="slider-scope-kicker">Story control · Chapters 1 & 2 only</span>'
+        '<span class="slider-scope-body">'
+        'The <strong>spotlight quarter</strong> below drives two views: '
+        'the highlighted band on the national timeline (Chapter 1) and '
+        'the state-level WPI snapshot (Chapter 2). Chapter 3 (cost '
+        'drivers), Chapter 4 (Forecast Scenarios), and Chapter 5 '
+        '(Findings) all read across the full series and are independent '
+        'of this control — earlier marker feedback flagged a single-'
+        'quarter snapshot as a poor fit for cumulative-driver analysis, '
+        'so Chapter 3 no longer responds to this slider.'
+        '</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    selected_quarter = st.select_slider(
+        "Spotlight quarter (Chapters 1 & 2 only)",
+        options=quarters,
+        value=quarters[-1],
+        key="spotlight_quarter",
+    )
+    sel_row = nat[nat["quarter"] == selected_quarter].iloc[0]
 
     # Three-line chart: wage_growth, inflation_rate, real_wage_growth.
     # The vertical band marks the quarter the reader has selected so the
@@ -652,7 +803,7 @@ def section_what_national(df: pd.DataFrame, selected_quarter: str) -> None:
             kpi_card(
                 "Selected quarter",
                 selected_quarter,
-                "Adjust using the sidebar slider.",
+                "Adjust using the slider above.",
             ),
             unsafe_allow_html=True,
         )
@@ -683,6 +834,8 @@ def section_what_national(df: pd.DataFrame, selected_quarter: str) -> None:
             ),
             unsafe_allow_html=True,
         )
+
+    return selected_quarter
 
 
 def section_what_state(df: pd.DataFrame, selected_quarter: str) -> None:
@@ -816,11 +969,511 @@ def section_what_state(df: pd.DataFrame, selected_quarter: str) -> None:
         unsafe_allow_html=True,
     )
 
+    # ------------------------------------------------------------------
+    # Below the state line — LGA-level structural disadvantage.
+    #
+    # The state-level WPI numbers above tell a relatively flat story
+    # (six-point spread across the federation). The LGA layer adds a
+    # third zoom level: where the cost-of-living pressure actually lands.
+    # SEIFA's IRSD is the ABS composite score most analysts reach for to
+    # answer that question — lower score, less headroom in the household
+    # budget when housing or essentials run above the average.
+    # ------------------------------------------------------------------
+    _render_lga_layer()
 
-def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
+
+def _render_lga_layer() -> None:
+    """LGA choropleth + ranked-extremes panel.
+
+    Split out from ``section_what_state`` so the spatial scaffolding for
+    the chapter reads top-to-bottom (national → state → LGA). The LGA
+    layer is intentionally *not* tied to the spotlight-quarter slider:
+    SEIFA is a structural snapshot (Census 2011), not a quarterly series,
+    and conflating it with the slider would imply the IRSD score changes
+    quarter to quarter — which it does not.
+
+    Reader controls (jurisdiction filter, colour-encoding mode) sit
+    above the map so the dense national choropleth is drillable — a
+    Treasury reader looking at NSW housing pressure can isolate NSW
+    without losing the national context line at the bottom.
+    """
+    geo_lga, df_lga = load_lga_data()
+
+    st.markdown(
+        '<div class="lga-section-enter">'
+        '<h3 style="margin-top:2rem;">Below the State Line: The LGA Picture</h3>'
+        '<p class="narrative">'
+        "State-level WPI varies modestly — the spread across the eight "
+        "jurisdictions is a few index points. The structural pressure "
+        "households actually face varies far more dramatically below the "
+        "state line. The choropleth below renders every Local Government "
+        "Area in Australia (565 LGAs, ABS 2011 boundaries) coloured by "
+        "the <strong>Index of Relative Socio-Economic Disadvantage</strong> "
+        "(IRSD): lower scores indicate less headroom in the household "
+        "budget — exactly the LGAs where a +7.8% cumulative housing CPI "
+        "print (Chapter 3) lands hardest."
+        "</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    # Reader controls — jurisdiction radio + view-mode radio. A radio
+    # row reads faster than a dropdown for ≤9 options and keeps state
+    # selection one click away from the rest of the page. The view-mode
+    # radio collapses what was previously two toggles (colour encoding +
+    # optional animated reveal) into one mutually-exclusive choice.
+    state_order = ["All Australia", "NSW", "VIC", "QLD", "SA", "WA", "TAS", "NT", "ACT"]
+    ctrl_left, ctrl_right = st.columns([3, 2])
+    with ctrl_left:
+        selected_state = st.radio(
+            "Jurisdiction",
+            options=state_order,
+            index=0,
+            horizontal=True,
+            key="lga_state_filter",
+            help=(
+                "Filter the LGA map to a single state or territory. "
+                "The KPI strip, population-by-decile bar, and reveal "
+                "animation all update with the selection."
+            ),
+        )
+    with ctrl_right:
+        view_mode = st.radio(
+            "View mode",
+            options=[
+                "National decile (banded)",
+                "IRSD score (continuous)",
+                "▶ Animated decile reveal",
+            ],
+            index=0,
+            horizontal=True,
+            key="lga_view_mode",
+            help=(
+                "Banded: discrete national-decile bins (1 = most "
+                "disadvantaged) — clearest policy-band reading. "
+                "Continuous: raw IRSD gradient. "
+                "Animated reveal: builds the map decile-by-decile so "
+                "the spatial concentration of disadvantage reveals "
+                "itself before the full federation is in view."
+            ),
+        )
+
+    if selected_state == "All Australia":
+        view_df = df_lga
+    else:
+        view_df = df_lga[df_lga["state"] == selected_state].copy()
+
+    # KPI strip — dataset-derived headline numbers that update with the
+    # state filter. Total LGAs / total population frame the view; the
+    # bottom-3-decile pair is the policy-relevant lead (this is the
+    # population that bears the cost-of-living print disproportionately).
+    n_lgas       = len(view_df)
+    total_pop    = int(view_df["population"].sum())
+    bottom3_mask = view_df["national_decile"].between(1, 3)
+    pop_bottom3  = int(view_df.loc[bottom3_mask, "population"].sum())
+    share_bottom3 = (pop_bottom3 / total_pop * 100) if total_pop else 0.0
+    score_min    = float(view_df["score"].min())
+    score_max    = float(view_df["score"].max())
+    iqr_spread   = score_max - score_min
+
+    k1, k2, k3, k4 = st.columns(4)
+    with k1:
+        st.markdown(
+            '<div class="lga-section-enter lga-section-enter--delay-1">'
+            + kpi_card("LGAs in view", f"{n_lgas:,}",
+                       "Census 2011 boundaries")
+            + "</div>",
+            unsafe_allow_html=True,
+        )
+    with k2:
+        st.markdown(
+            '<div class="lga-section-enter lga-section-enter--delay-1">'
+            + kpi_card("Population covered", f"{total_pop/1_000_000:.2f}M",
+                       "2011 usual residents")
+            + "</div>",
+            unsafe_allow_html=True,
+        )
+    with k3:
+        st.markdown(
+            '<div class="lga-section-enter lga-section-enter--delay-2">'
+            + kpi_card("In bottom-3 IRSD deciles", f"{share_bottom3:.1f}%",
+                       f"{pop_bottom3/1_000_000:.2f}M people")
+            + "</div>",
+            unsafe_allow_html=True,
+        )
+    with k4:
+        st.markdown(
+            '<div class="lga-section-enter lga-section-enter--delay-2">'
+            + kpi_card("IRSD spread", f"{int(iqr_spread)} pts",
+                       f"{int(score_min)} → {int(score_max)}")
+            + "</div>",
+            unsafe_allow_html=True,
+        )
+
+    # ----- Map -----------------------------------------------------------
+    # Three view modes:
+    #   * banded:     discrete national-decile bins (1..10) — easiest
+    #                 read as policy bands, removes visual dominance of
+    #                 outliers.
+    #   * continuous: raw IRSD score, range-pinned to the *national*
+    #                 min/max so a state filter doesn't rescale colours
+    #                 and mislead cross-state comparison.
+    #   * animated:   the same banded view but progressively reveals
+    #                 deciles 1 → 10 across frames, with a play button.
+    #                 Tells the "where does disadvantage cluster first?"
+    #                 story without forcing a reader to read 564 polygons.
+    nat_score_min = float(df_lga["score"].min())
+    nat_score_max = float(df_lga["score"].max())
+
+    # Single decile palette used by both banded and animated modes — keeps
+    # the visual language identical across views so switching modes feels
+    # like a lens change, not a redesign.
+    decile_palette = [
+        "#7f1d1d", "#b91c1c", "#dc2626", "#f87171", "#fde68a",
+        "#bfdbfe", "#60a5fa", "#3b82f6", "#1d4ed8", "#1e3a8a",
+    ]
+    decile_colour_map = {str(i + 1): c for i, c in enumerate(decile_palette)}
+    title_suffix = "Australia" if selected_state == "All Australia" else selected_state
+
+    if view_mode.startswith("National decile"):
+        view_df_banded = view_df.assign(
+            decile_label=view_df["national_decile"].astype("Int64").astype(str)
+        )
+        fig = px.choropleth(
+            view_df_banded,
+            geojson=geo_lga,
+            locations="lga_id",
+            featureidkey="properties.LGA_CODE11",
+            color="decile_label",
+            category_orders={"decile_label": [str(i) for i in range(1, 11)]},
+            color_discrete_map=decile_colour_map,
+            hover_name="lga_name",
+            custom_data=["state", "score", "national_decile", "population"],
+        )
+        fig.update_layout(
+            legend=dict(
+                title=dict(text="National IRSD decile<br>(1 = most disadvantaged)"),
+                orientation="v",
+                yanchor="middle", y=0.5,
+                xanchor="left", x=1.02,
+                font=dict(size=11),
+                bgcolor="rgba(0,0,0,0)",
+            ),
+        )
+    elif view_mode.startswith("IRSD score"):
+        fig = px.choropleth(
+            view_df,
+            geojson=geo_lga,
+            locations="lga_id",
+            featureidkey="properties.LGA_CODE11",
+            color="score",
+            color_continuous_scale=[
+                [0.00, "#7f1d1d"],
+                [0.25, "#dc2626"],
+                [0.50, "#fde68a"],
+                [0.75, "#60a5fa"],
+                [1.00, "#1e3a8a"],
+            ],
+            range_color=(nat_score_min, nat_score_max),
+            hover_name="lga_name",
+            custom_data=["state", "score", "national_decile", "population"],
+        )
+        fig.update_layout(
+            coloraxis_colorbar=dict(
+                title="IRSD score",
+                thickness=14,
+                len=0.7,
+            ),
+        )
+    else:
+        # ----- Animated decile reveal -----------------------------------
+        # Build a long frame: for each k in 1..10, include every LGA in
+        # view with national_decile <= k. Plotly's animation_frame then
+        # gives us a play button + slider that morphs the map decile by
+        # decile. Visually: red dots scatter first (the bottom decile),
+        # then fill outwards through amber to deep blue.
+        frames = []
+        for k in range(1, 11):
+            sub = view_df[view_df["national_decile"] <= k].copy()
+            sub["frame"] = f"Up to decile {k}"
+            sub["decile_label"] = sub["national_decile"].astype("Int64").astype(str)
+            frames.append(sub)
+        anim_df = pd.concat(frames, ignore_index=True)
+        frame_order = [f"Up to decile {k}" for k in range(1, 11)]
+
+        fig = px.choropleth(
+            anim_df,
+            geojson=geo_lga,
+            locations="lga_id",
+            featureidkey="properties.LGA_CODE11",
+            color="decile_label",
+            category_orders={
+                "decile_label": [str(i) for i in range(1, 11)],
+                "frame": frame_order,
+            },
+            color_discrete_map=decile_colour_map,
+            hover_name="lga_name",
+            custom_data=["state", "score", "national_decile", "population"],
+            animation_frame="frame",
+        )
+        # On-brand play/pause controls + slider. Defaults from Plotly are
+        # styled like a Jupyter widget — we restyle to match the editorial
+        # voice of the rest of the page (serif label, muted track).
+        fig.update_layout(
+            legend=dict(
+                title=dict(text="National IRSD decile<br>(1 = most disadvantaged)"),
+                orientation="v",
+                yanchor="middle", y=0.5,
+                xanchor="left", x=1.02,
+                font=dict(size=11),
+                bgcolor="rgba(0,0,0,0)",
+            ),
+            updatemenus=[dict(
+                type="buttons",
+                showactive=False,
+                x=0.02, y=-0.12,
+                xanchor="left", yanchor="top",
+                pad=dict(t=0, r=10),
+                bgcolor="#ffffff",
+                bordercolor=PALETTE["rule"],
+                font=dict(family="Georgia, serif", size=12, color=PALETTE["ink"]),
+                buttons=[
+                    dict(
+                        label="▶ Play reveal",
+                        method="animate",
+                        args=[None, dict(
+                            frame=dict(duration=700, redraw=True),
+                            transition=dict(duration=350, easing="cubic-in-out"),
+                            fromcurrent=True,
+                            mode="immediate",
+                        )],
+                    ),
+                    dict(
+                        label="⏸ Pause",
+                        method="animate",
+                        args=[[None], dict(
+                            frame=dict(duration=0, redraw=False),
+                            transition=dict(duration=0),
+                            mode="immediate",
+                        )],
+                    ),
+                ],
+            )],
+            sliders=[dict(
+                active=0,
+                x=0.15, y=-0.12, len=0.8,
+                xanchor="left", yanchor="top",
+                pad=dict(t=4, b=0),
+                currentvalue=dict(
+                    prefix="Showing: ",
+                    font=dict(family="Georgia, serif", size=12, color=PALETTE["ink"]),
+                ),
+                transition=dict(duration=350, easing="cubic-in-out"),
+                bgcolor=PALETTE["rule"],
+                activebgcolor=PALETTE["highlight"],
+                bordercolor=PALETTE["rule"],
+                font=dict(family="Georgia, serif", size=11, color=PALETTE["muted"]),
+                steps=[
+                    dict(
+                        label=str(k),
+                        method="animate",
+                        args=[[f"Up to decile {k}"], dict(
+                            frame=dict(duration=350, redraw=True),
+                            transition=dict(duration=350, easing="cubic-in-out"),
+                            mode="immediate",
+                        )],
+                    )
+                    for k in range(1, 11)
+                ],
+            )],
+        )
+
+    fig.update_traces(
+        hovertemplate=(
+            "<b>%{hovertext}</b><br>"
+            "State: %{customdata[0]}<br>"
+            "IRSD score: <b>%{customdata[1]:.0f}</b> "
+            "(national decile %{customdata[2]:.0f} / 10)<br>"
+            "Population (2011): %{customdata[3]:,.0f}"
+            "<extra></extra>"
+        ),
+        marker_line_width=0.3,
+        marker_line_color="#ffffff",
+    )
+    fig.update_geos(
+        fitbounds="locations",
+        visible=False,
+        bgcolor=PALETTE["paper"],
+    )
+    is_animated = view_mode.startswith("▶")
+    fig.update_layout(
+        title=dict(
+            text=(
+                f"IRSD by LGA — {title_suffix} "
+                "<span style='color:#6b7280;font-size:12px;'>"
+                "(SEIFA, ABS Census 2011 — lower = more disadvantage)</span>"
+            ),
+            x=0, y=0.97, yanchor="top",
+            font=dict(size=14),
+        ),
+        # Smooth transitions on layout updates: the morph applies when the
+        # animation steps between frames, and provides a subtle ease on
+        # mode/state switches too.
+        transition=dict(duration=350, easing="cubic-in-out"),
+        margin=dict(l=0, r=0, t=70, b=80 if is_animated else 0),
+        height=660 if is_animated else 620,
+        paper_bgcolor=PALETTE["paper"],
+        font=dict(family="Georgia, serif", color=PALETTE["ink"]),
+    )
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+
+    # ----- Population-by-decile bar --------------------------------------
+    # The map answers "where?"; this bar answers "how many?". A national
+    # average obscures that the bottom 3 deciles aren't a thin tail —
+    # millions of Australians live there, and they're the cohort with
+    # the least headroom against the housing CPI print in Chapter 3.
+    decile_pop = (
+        view_df.dropna(subset=["national_decile"])
+        .groupby("national_decile", as_index=False)["population"]
+        .sum()
+        .sort_values("national_decile")
+    )
+    decile_pop["national_decile"] = decile_pop["national_decile"].astype(int)
+    decile_pop["pop_m"] = decile_pop["population"] / 1_000_000
+    decile_pop["band_colour"] = decile_pop["national_decile"].map(
+        lambda d: ("#dc2626" if d <= 3 else ("#fde68a" if d <= 7 else "#1e3a8a"))
+    )
+
+    # Bar chart spans full width — easier to read 10 decile bars across the
+    # page than squeezed into 3/5 of it, and avoids the awkward vertical
+    # mismatch that arose from pairing a 380px chart with two stacked
+    # extreme-LGA tables.
+    fig_bar = go.Figure(
+        go.Bar(
+            x=decile_pop["national_decile"],
+            y=decile_pop["pop_m"],
+            marker=dict(color=decile_pop["band_colour"]),
+            customdata=decile_pop[["population"]].values,
+            hovertemplate=(
+                "National decile <b>%{x}</b><br>"
+                "Population (2011): %{customdata[0]:,.0f}<br>"
+                "(%{y:.2f}M)<extra></extra>"
+            ),
+            text=decile_pop["pop_m"].map(lambda v: f"{v:.2f}M"),
+            textposition="outside",
+            textfont=dict(size=11),
+        )
+    )
+    fig_bar.update_layout(
+        title=dict(
+            text=(
+                f"Population by national IRSD decile — {title_suffix} "
+                "<span style='color:#6b7280;font-size:11px;'>"
+                "(red = bottom 3 deciles)</span>"
+            ),
+            x=0, font=dict(size=14),
+        ),
+        xaxis_title="National IRSD decile (1 = most disadvantaged)",
+        yaxis_title="Population (millions, 2011)",
+        xaxis=dict(tickmode="array", tickvals=list(range(1, 11))),
+        showlegend=False,
+        bargap=0.25,
+        # Smooth bar-height morph when the state filter changes.
+        transition=dict(duration=400, easing="cubic-in-out"),
+    )
+    _apply_chart_theme(fig_bar, height=360)
+    st.plotly_chart(fig_bar, width="stretch", config={"displayModeBar": False})
+
+    # ----- Extremes tables — five most + least disadvantaged -------------
+    # Sit side-by-side below the bar chart. "Most" and "least" are
+    # parallel concepts (mirror image of the same distribution), so the
+    # two cards belong on the same row, not stacked.
+    most_disadv  = view_df.nsmallest(5, "score")
+    least_disadv = view_df.nlargest(5, "score")
+
+    low_col, high_col = st.columns(2)
+    with low_col:
+        rows_low = "".join(
+            f"<tr><td>{r.lga_name}</td><td>{r.state}</td>"
+            f"<td style='text-align:right;color:#7f1d1d;'><strong>{int(r.score)}</strong></td></tr>"
+            for r in most_disadv.itertuples()
+        )
+        st.markdown(
+            '<div class="lga-table-card lga-table-card--low">'
+            '<div class="lga-table-title">Five most disadvantaged LGAs (in view)</div>'
+            f'<table class="lga-table"><thead><tr>'
+            '<th>LGA</th><th>State</th><th style="text-align:right;">IRSD</th>'
+            '</tr></thead>'
+            f'<tbody>{rows_low}</tbody></table></div>',
+            unsafe_allow_html=True,
+        )
+    with high_col:
+        rows_high = "".join(
+            f"<tr><td>{r.lga_name}</td><td>{r.state}</td>"
+            f"<td style='text-align:right;color:#1e3a8a;'><strong>{int(r.score)}</strong></td></tr>"
+            for r in least_disadv.itertuples()
+        )
+        st.markdown(
+            '<div class="lga-table-card lga-table-card--high">'
+            '<div class="lga-table-title">Five least disadvantaged LGAs (in view)</div>'
+            f'<table class="lga-table"><thead><tr>'
+            '<th>LGA</th><th>State</th><th style="text-align:right;">IRSD</th>'
+            '</tr></thead>'
+            f'<tbody>{rows_high}</tbody></table></div>',
+            unsafe_allow_html=True,
+        )
+
+    # ----- Dataset-driven pull quote -------------------------------------
+    # All numbers below are derived from the current view_df, not hard-
+    # coded. The national-context line in the "All Australia" branch
+    # uses the full df_lga so the comparison always has a denominator.
+    if selected_state == "All Australia":
+        quote = (
+            f"<strong>{share_bottom3:.1f}%</strong> of the Australian population "
+            f"({pop_bottom3/1_000_000:.2f}M of {total_pop/1_000_000:.2f}M) lives in "
+            f"an LGA in the bottom three national IRSD deciles. The IRSD spread "
+            f"across the federation is <strong>{int(iqr_spread)} points</strong> "
+            f"({int(score_min)} → {int(score_max)}). A uniform CPI deflator applied "
+            f"to every LGA mis-states the lived pressure by orders of magnitude — "
+            f"the LGA layer should accompany any national cost-of-living parameter "
+            f"in a Treasury brief."
+        )
+    else:
+        nat_bottom3_mask = df_lga["national_decile"].between(1, 3)
+        nat_share = df_lga.loc[nat_bottom3_mask, "population"].sum() / df_lga["population"].sum() * 100
+        delta_vs_nat = share_bottom3 - nat_share
+        direction = "above" if delta_vs_nat >= 0 else "below"
+        quote = (
+            f"In <strong>{selected_state}</strong>, "
+            f"<strong>{share_bottom3:.1f}%</strong> of residents "
+            f"({pop_bottom3/1_000_000:.2f}M of {total_pop/1_000_000:.2f}M) live in "
+            f"an LGA in the bottom three national IRSD deciles — "
+            f"<strong>{abs(delta_vs_nat):.1f} pts {direction}</strong> the national "
+            f"share ({nat_share:.1f}%). State-internal IRSD spread is "
+            f"<strong>{int(iqr_spread)} points</strong> "
+            f"({int(score_min)} → {int(score_max)})."
+        )
+
+    st.markdown(
+        '<div class="lga-section-enter lga-section-enter--delay-3">'
+        f'<div class="pull-quote">{quote}</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def section_so_what_drivers(df: pd.DataFrame) -> None:
     """So What — what's actually driving inflation? Food, housing,
-    transport CPI sub-indices over time. Stacked area shows shape;
-    final-quarter horizontal bars show levels."""
+    transport CPI sub-indices over time.
+
+    Note on scope: this chapter previously took a ``selected_quarter``
+    argument and rendered a single-quarter KPI strip driven by the
+    global slider. Marker feedback flagged that as confusing — Chapter
+    3 is a cumulative-drivers story, not a quarter snapshot — so the
+    slider dependency is removed and the KPI strip below now reports
+    cumulative gaps against the All-Groups average across the whole
+    window. The slider in Chapter 1 is scoped to Chapters 1–2 only.
+    """
     nat = national_series(df)
 
     chapter_header(
@@ -935,31 +1588,41 @@ def section_so_what_drivers(df: pd.DataFrame, selected_quarter: str) -> None:
     _apply_chart_theme(fig, height=440)
     st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
-    # --- KPI cards for selected quarter ---
-    sel_row = nat[nat["quarter"] == selected_quarter].iloc[0]
+    # --- KPI cards: cumulative across the full window -------------------
+    # Each tile shows the category's cumulative QoQ change and the gap
+    # against the cumulative All-Groups CPI for the same window. This
+    # is the right unit for a cost-drivers chapter — a single quarter
+    # tile would re-import the snapshot framing the slider used to
+    # impose, which the marker flagged as confusing.
+    cum_cpi_all   = nat["inflation_rate"].sum()
+    cum_housing   = nat["housing"].sum()
+    cum_food      = nat["food"].sum()
+    cum_transport = nat["transport"].sum()
+    period_label  = f"{nat['quarter'].iloc[0]} → {nat['quarter'].iloc[-1]}"
+
     k1, k2, k3, k4 = st.columns(4)
     with k1:
         st.markdown(kpi_card(
-            "Selected quarter", selected_quarter,
-            "Adjust using the sidebar slider.",
+            "Period covered", period_label,
+            f"{len(nat)} quarters · All Groups CPI {cum_cpi_all:+.1f}%",
         ), unsafe_allow_html=True)
     with k2:
-        housing_vs_avg = sel_row["housing"] - sel_row["inflation_rate"]
+        gap = cum_housing - cum_cpi_all
         st.markdown(kpi_card(
-            "🏠 Housing", f"{sel_row['housing']:+.1f}%",
-            f"{housing_vs_avg:+.1f}% vs All Groups average.",
+            "🏠 Housing (cumulative)", f"{cum_housing:+.1f}%",
+            f"{gap:+.1f} ppt vs All Groups average.",
         ), unsafe_allow_html=True)
     with k3:
-        food_vs_avg = sel_row["food"] - sel_row["inflation_rate"]
+        gap = cum_food - cum_cpi_all
         st.markdown(kpi_card(
-            "🛒 Food", f"{sel_row['food']:+.1f}%",
-            f"{food_vs_avg:+.1f}% vs All Groups average.",
+            "🛒 Food (cumulative)", f"{cum_food:+.1f}%",
+            f"{gap:+.1f} ppt vs All Groups average.",
         ), unsafe_allow_html=True)
     with k4:
-        transport_vs_avg = sel_row["transport"] - sel_row["inflation_rate"]
+        gap = cum_transport - cum_cpi_all
         st.markdown(kpi_card(
-            "🚗 Transport", f"{sel_row['transport']:+.1f}%",
-            f"{transport_vs_avg:+.1f}% vs All Groups average.",
+            "🚗 Transport (cumulative)", f"{cum_transport:+.1f}%",
+            f"{gap:+.1f} ppt vs All Groups average.",
         ), unsafe_allow_html=True)
 
     # --- Cumulative summary ---
@@ -1166,79 +1829,211 @@ def section_what_next_whatif(df: pd.DataFrame) -> None:
 
 
 def section_call_to_action(df: pd.DataFrame) -> None:
-    """Closing — 7 recommendations for the Treasury analyst."""
+    """Closing — five dataset-grounded briefing points for Treasury.
+
+    Each point opens with a finding computed from this dataset (specific
+    number, specific quarter) and follows with an analyst-framed
+    "suggested next step". The chapter deliberately avoids policy-maker
+    imperatives ("Treasury should reform X") — a Treasury policy analyst
+    informs decisions; the Minister makes them.
+    """
     nat = national_series(df)
-    cum_housing = nat["housing"].sum()
-    cum_all = nat["inflation_rate"].sum()
-    housing_gap = abs(cum_housing - cum_all)
+
+    # Everything below is computed once and inlined into the prose so the
+    # briefing points stay explicitly anchored to the data — if the CSV
+    # is refreshed with a new ABS release, the headline numbers update
+    # without us hand-editing the copy.
+    cum_wage      = nat["wage_growth"].sum()
+    cum_cpi       = nat["inflation_rate"].sum()
+    cum_real      = nat["real_wage_growth"].sum()
+    cum_housing   = nat["housing"].sum()
+    cum_transport = nat["transport"].sum()
+    housing_gap   = cum_housing - cum_cpi
+    transport_gap = cum_transport - cum_cpi
+    neg_quarters   = int((nat["real_wage_growth"] < 0).sum())
+    total_quarters = len(nat)
+
+    # Per-state WPI growth across the full series — the spread is the
+    # evidence that jurisdictional disaggregation matters.
+    first_q  = nat["quarter"].iloc[0]
+    last_q   = nat["quarter"].iloc[-1]
+    s_first  = df[df["quarter"] == first_q].set_index("state_code")["wage_index"]
+    s_last   = df[df["quarter"] == last_q].set_index("state_code")["wage_index"]
+    s_growth = ((s_last - s_first) / s_first * 100).sort_values(ascending=False)
+    leader_code, laggard_code = s_growth.index[0], s_growth.index[-1]
+    state_spread = s_growth.iloc[0] - s_growth.iloc[-1]
+
+    # LGA-layer evidence for the geographic-disaggregation finding.
+    # Pulled live from the same SEIFA dataframe the choropleth uses so
+    # the briefing point stays in lock-step with the LGA visualisation.
+    _, df_lga = load_lga_data()
+    nat_total_pop  = float(df_lga["population"].sum())
+    nat_b3_pop     = float(df_lga.loc[df_lga["national_decile"].between(1, 3), "population"].sum())
+    nat_b3_share   = nat_b3_pop / nat_total_pop * 100
+    # Worst-affected state by bottom-3 share — the dataset-derived
+    # outlier that makes the "national-uniform parameter misstates the
+    # lived pressure" point concrete.
+    state_b3 = (
+        df_lga.dropna(subset=["national_decile"])
+        .assign(in_b3=lambda d: d["national_decile"].between(1, 3))
+        .groupby("state")
+        .apply(lambda g: g.loc[g["in_b3"], "population"].sum() / g["population"].sum() * 100)
+        .sort_values(ascending=False)
+    )
+    worst_state      = str(state_b3.index[0])
+    worst_state_pct  = float(state_b3.iloc[0])
+    irsd_spread      = int(df_lga["score"].max() - df_lga["score"].min())
+
+    # Transport reverted sharply: pull the worst two QoQ Transport prints
+    # straight from the data rather than hard-coding the values, so the
+    # briefing copy stays correct if the CSV is refreshed.
+    transport_lows = nat.nsmallest(2, "transport")[["quarter", "transport"]].values
+    t_low1_q, t_low1_v = transport_lows[0]
+    t_low2_q, t_low2_v = transport_lows[1]
+
+    # Housing 2024 reversion + 2025 quarterly trajectory: also pulled
+    # from the data rather than hard-coded, so the line "+1.7%, +1.2%..."
+    # never desyncs from the CSV.
+    def _housing(quarter_label: str) -> float:
+        return float(nat.loc[nat["quarter"] == quarter_label, "housing"].iloc[0])
+
+    h_2024_q3    = _housing("Q3 2024")
+    h_2024_q4    = _housing("Q4 2024")
+    housing_2025 = float(nat.loc[nat["year"] == 2025, "housing"].sum())
+    h_2025_q     = (
+        nat[nat["year"] == 2025]
+        .sort_values("quarter_date")["housing"]
+        .map(lambda v: f"{v:+.1f}%")
+        .tolist()
+    )
+    h_2025_trail = ", ".join(h_2025_q)
 
     chapter_header(
         anchor="ch5",
-        title="5. Policy Recommendations",
+        title="5. Findings and Next Steps for Treasury",
         lede=(
-            "The analysis in this report indicates that headline wage "
-            "and inflation measures do not fully capture the cost pressures "
-            "experienced by households. While nominal wages increased over "
-            "the reporting period, real wage gains remained limited, "
-            "particularly where essential expenditure categories such as "
-            "housing rose faster than average inflation. This suggests a "
-            "need for more targeted, distributionally aware policy settings."
+            "The five points below are written from a Treasury policy "
+            "analyst's vantage point: each one starts with a number "
+            "this dataset has already produced in Chapters 1–4, and "
+            "ends with a <em>suggested next step</em> for the cost-of-"
+            "living desk's next round of modelling or briefing. The "
+            "framing is deliberate — a policy analyst can influence "
+            "decisions and shape the briefing pack, but the call sits "
+            "with the Treasurer."
         ),
     )
 
-    # Full-width vertical stack — each recommendation gets the page's
-    # full reading width so the stacked list scans as a single column.
-    recommendations = [
+    briefing_points = [
         (
-            "Recommendation 1: Review indexation arrangements for income support payments",
-            "Government payments like rent assistance, JobSeeker, and the "
-            "Age Pension are currently adjusted based on the overall "
-            "inflation average. But housing costs have risen "
-            f"<strong>{cum_housing:+.1f}%</strong> over this period — "
-            f"<strong>{housing_gap:.1f} percentage points</strong> above "
-            "that average. <br><br> The adjustment formula should be reviewed to "
-            "account for the specific costs that hit hardest, not just "
-            "the average across everything.",
+            f"Finding 1 — Real wages spent {neg_quarters} of {total_quarters} quarters underwater.",
+            (
+                f"Real wage growth was negative in <strong>{neg_quarters} "
+                f"of {total_quarters}</strong> quarters from {first_q} to "
+                f"{last_q} (see Chapter 1). Across the full window, "
+                f"nominal wage growth of <strong>{cum_wage:+.1f}%</strong> "
+                f"ran only <strong>{cum_real:+.1f} ppt</strong> ahead of "
+                f"CPI — a margin small enough to invert on a single "
+                f"quarterly print."
+                "<br><br>"
+                "<em>Suggested next step.</em> The WPI-minus-CPI gap is "
+                "not currently a routinely reported aggregate. Treasury "
+                "may wish to publish it as a standing quarterly indicator "
+                "in the post-ABS-release brief so the Treasurer's office "
+                "reads purchasing-power trajectory at a glance, rather "
+                "than reconciling the two series by hand."
+            ),
         ),
         (
-            "Recommendation 2: Strengthen Commonwealth Rent Assistance adequacy",
-            "Given the continued pressure on renters, Treasury should assess whether the maximum rate and eligibility "
-            "thresholds for Commonwealth Rent Assistance remain adequate. The Economic Inclusion Advisory "
-            "Committee has repeatedly recommended stronger support for low-income households, including increased "
-            "assistance for people relying on income support.",
+            f"Finding 2 — Housing CPI ran {housing_gap:+.1f} ppt above the All-Groups average.",
+            (
+                f"Housing cumulatively rose <strong>{cum_housing:+.1f}%</strong> "
+                f"against an All-Groups CPI of <strong>{cum_cpi:+.1f}%</strong> "
+                f"over the period — a <strong>{housing_gap:+.1f} ppt</strong> "
+                f"divergence (Chapter 3). Income-support payments indexed "
+                f"to All-Groups therefore trail the cost component most "
+                f"concentrated in lower-income household budgets."
+                "<br><br>"
+                "<em>Suggested next step.</em> Treasury may wish to model "
+                "an indexation variant that gives Housing a heavier weight "
+                "than its All-Groups share, and present the option for "
+                "the Treasurer's consideration alongside the next "
+                "scheduled biannual indexation review. The What-If tool "
+                "in Chapter 4 already accepts a parameterised inflation "
+                "input — the same machinery can be re-pointed at a "
+                "Housing-weighted deflator."
+            ),
         ),
         (
-            "Recommendation 3: Incorporate jurisdiction-level analysis into policy modelling",
-            "Treasury should model how wage, inflation and housing pressures differ across states and territories. "
-            "National payment settings may have different real-world effects across jurisdictions, particularly "
-            "where wage growth and housing costs diverge.",
+            f"Finding 3 — Transport CPI ran {transport_gap:+.1f} ppt below the All-Groups basket.",
+            (
+                f"Transport contributed only <strong>{cum_transport:+.1f}%</strong> "
+                f"over the nine-quarter window — <strong>{transport_gap:+.1f} ppt</strong> "
+                f"below the All-Groups average (Chapter 3), driven by "
+                f"negative prints in {t_low1_q} (<strong>{t_low1_v:+.1f}%</strong>) "
+                f"and {t_low2_q} (<strong>{t_low2_v:+.1f}%</strong>). "
+                f"Without that drag, both headline CPI and the real-wage "
+                f"gap would have read materially worse."
+                "<br><br>"
+                "<em>Suggested next step.</em> Treasury may wish to "
+                "stress-test the forward real-wage projection in Chapter "
+                "4 against a scenario where Transport reverts to the "
+                "broader basket. The what-if controls already accept a "
+                "hypothetical inflation rate; flipping them to a "
+                "normalised-Transport case surfaces the sensitivity for "
+                "the Treasurer in a single chart."
+            ),
         ),
         (
-            "Recommendation 4: Track real wage growth as a standing quarterly indicator",
-            "Treasury should report the gap between wage growth and inflation as a core quarterly measure. "
-            "This would provide a clearer indication of whether household purchasing power is improving or "
-            "declining, rather than relying on wage growth and CPI separately.",
+            f"Finding 4 — Geographic disaggregation: {state_spread:.2f} ppt WPI spread, {irsd_spread}-point IRSD spread.",
+            (
+                f"Two pieces of evidence in this dataset point the same "
+                f"direction. <strong>(a)</strong> WPI growth from {first_q} "
+                f"to {last_q} ranged from "
+                f"<strong>{s_growth.iloc[0]:+.1f}% in {leader_code}</strong> "
+                f"to <strong>{s_growth.iloc[-1]:+.1f}% in {laggard_code}</strong> "
+                f"— a <strong>{state_spread:.2f} ppt</strong> jurisdictional "
+                f"spread (Chapter 2). <strong>(b)</strong> Below the state "
+                f"line, <strong>{nat_b3_share:.1f}%</strong> of Australians "
+                f"(<strong>{nat_b3_pop/1_000_000:.2f}M</strong> of "
+                f"{nat_total_pop/1_000_000:.2f}M) live in an LGA in the "
+                f"bottom three national IRSD deciles — and the share is "
+                f"not evenly distributed: in <strong>{worst_state}</strong> "
+                f"it reaches <strong>{worst_state_pct:.1f}%</strong>. The "
+                f"national IRSD spread is <strong>{irsd_spread} points</strong>, "
+                f"orders of magnitude wider than the cumulative real-wage "
+                f"gain of {cum_real:+.1f}%."
+                "<br><br>"
+                "<em>Suggested next step.</em> For any cost-of-living "
+                "measure with regional take-up patterns (Energy Bill "
+                "Relief, rent assistance settings, place-based "
+                "supplements), Treasury may wish to disaggregate the "
+                "real-wage projection by state — and, where the "
+                "instrument permits, by SEIFA decile — before settling "
+                "on a national parameter. The LGA layer in Chapter 2 is "
+                "ready to be re-pointed at any sub-state target group."
+            ),
         ),
         (
-            "Recommendation 5: Prioritise housing supply and planning reform",
-            "Longer-term cost-of-living relief requires addressing housing supply constraints. The Productivity "
-            "Commission has highlighted weak housing construction productivity and the need to reduce regulatory "
-            "burden, streamline approvals and support innovation in construction.",
-        ),
-        (
-            "Recommendation 6: Expand social and affordable housing investment",
-            "Treasury should continue to assess the role of social and affordable housing in reducing rental "
-            "stress. The National Housing Supply and Affordability Council has noted that social and affordable "
-            "housing supply is accelerating, but housing costs and rents remain elevated.",
-        ),
-        (
-            "Recommendation 7: Ensure cost-of-living relief is targeted and inflation-aware",
-            "Cost-of-living measures should be designed to support vulnerable households without adding materially "
-            "to aggregate demand. The RBA has noted that subsidies can lower headline inflation temporarily, but "
-            "their removal can later lift measured inflation.",
+            "Finding 5 — Housing CPI reverted sharply after two negative prints.",
+            (
+                f"Housing printed negative in 2024 Q3 (<strong>{h_2024_q3:+.1f}%</strong>) "
+                f"and 2024 Q4 (<strong>{h_2024_q4:+.1f}%</strong>) before "
+                f"rebounding to a cumulative <strong>{housing_2025:+.1f}%</strong> "
+                f"across 2025 ({h_2025_trail} Q1–Q4). The "
+                f"shape is consistent with administered-price interventions "
+                f"temporarily suppressing the index, with the level effect "
+                f"recovered once the supports rolled off."
+                "<br><br>"
+                "<em>Suggested next step.</em> Treasury may wish to "
+                "report an <em>underlying</em> Housing CPI alongside the "
+                "headline series in cost-of-living briefings, so the "
+                "Treasurer can separate policy-induced moves from "
+                "structural pressure when the next round of relief "
+                "measures is being calibrated."
+            ),
         ),
     ]
-    for label, body in recommendations:
+    for label, body in briefing_points:
         st.markdown(
             '<div class="policy-rec">'
             f'<div class="rec-label">{label}</div>'
@@ -1259,25 +2054,20 @@ def main() -> None:
     # --- Top banner ---
     st.image(str(BANNER_PATH))
 
-    nat = national_series(df)
-    quarters = nat["quarter"].tolist()
-
-    # Sidebar = global story controls. Kept narrow on purpose — it's a
-    # nudge, not a dashboard panel. The quarter slider is the single
-    # control that drives the map + KPI tiles in Chapter 2.
+    # Sidebar = reference material only (glossary + sources).
+    # The spotlight-quarter slider used to live here, but the global
+    # placement implied it drove the whole document; marker feedback
+    # asked us to scope it explicitly. The slider now renders inside
+    # Chapter 1, co-located with the chart it primarily drives.
     with st.sidebar:
-        st.markdown("### Story controls")
+        st.markdown("### Reference")
         st.markdown(
             '<p style="color:#6b7280;font-size:0.9rem;">'
-            "Move the slider to change the spotlight quarter on the "
-            "national timeline and the state map."
+            "Definitions and source links for the figures used throughout "
+            "the story. The interactive controls (spotlight quarter and "
+            "what-if scenarios) live in-chapter where they take effect."
             "</p>",
             unsafe_allow_html=True,
-        )
-        selected_quarter = st.select_slider(
-            "Spotlight quarter",
-            options=quarters,
-            value=quarters[-1],
         )
 
         with st.expander("Glossary", expanded=False):
@@ -1306,9 +2096,14 @@ def main() -> None:
     section_hero(df)
     section_tldr(df)
     st.markdown('<hr class="section-divider" />', unsafe_allow_html=True)
-    section_what_national(df, selected_quarter)
+    # section_what_national renders the spotlight-quarter slider as its
+    # first widget and returns the selected value so Chapters 2 and 3
+    # stay in sync without us re-introducing global state.
+    selected_quarter = section_what_national(df)
     section_what_state(df, selected_quarter)
-    section_so_what_drivers(df, selected_quarter)
+    # Chapter 3 deliberately does not take the spotlight quarter —
+    # cumulative-driver KPIs read the full window, not a snapshot.
+    section_so_what_drivers(df)
     section_what_next_whatif(df)
     section_call_to_action(df)
 
